@@ -10,8 +10,8 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '0.40';
-# $VERSION = eval $VERSION;
+our $VERSION = '0.40_02';
+$VERSION = eval $VERSION;
 
 use Carp;
 use Algorithm::ScheduledPath::Edge 0.40;
@@ -26,6 +26,10 @@ L<Algorithm::ScheduledPath>.
 =over
 
 =item new
+
+  $path = new Algorithm::ScheduledPath::Path( @edges );
+
+Creates a new pathand adds edges if they are specified (see L</add_edge>).
 
 =cut
 
@@ -47,6 +51,13 @@ sub new {
 }
 
 =item add_edge
+
+  $path->add_edge( $edge );
+
+Adds an edge to the path (see L<Algorithm::ScheduledPath::Edge>).
+
+The path must be connected, so the L</origin> of the edge to be added
+must be the same as the L</destination> of the path.
 
 =cut
 
@@ -82,6 +93,10 @@ sub add_edge {
 
 =item first_edge
 
+  $edge = $path->first_edge;
+
+Returns the first edge in the path.
+
 =cut
 
 sub first_edge {
@@ -96,6 +111,10 @@ sub first_edge {
 
 =item origin
 
+  $orig = $path->origin;
+
+Returns the origin of the path.
+
 =cut
 
 sub origin {
@@ -105,6 +124,10 @@ sub origin {
 }
 
 =item last_edge
+
+  $edge = $path->last_edge;
+
+Returns the last edge of the path.
 
 =cut
 
@@ -120,6 +143,10 @@ sub last_edge {
 
 =item destination
 
+  $dest = $path->destination;
+
+Returns the destination of the path.
+
 =cut
 
 sub destination {
@@ -130,6 +157,9 @@ sub destination {
 
 =item depart_time
 
+  $time = $path->depart_time;
+
+Returns the departure time from the L</origin>.
 
 =cut
 
@@ -141,6 +171,10 @@ sub depart_time {
 
 =item arrive_time
 
+  $time = $path->arrive_time;
+
+Returns the arrival time at the L</destination>.
+
 =cut
 
 sub arrive_time {
@@ -151,6 +185,9 @@ sub arrive_time {
 
 =item travel_time
 
+  $time = $path->travel_time;
+
+Returns the total travel time (arrival time - depart time).
 
 =cut
 
@@ -254,9 +291,30 @@ sub compressed {
     else {
       $comp->last_edge->destination( $edge->destination );
       $comp->last_edge->arrive_time( $edge->arrive_time );
+      carp "Warning: data will not be copied", if (defined $edge->data);
     }
   }
   return $comp;
+}
+
+
+=item copy
+
+  $path2 = $path->copy;
+
+Copies the path.
+
+=cut
+
+sub copy {
+  my $self = shift;
+  my $copy = __PACKAGE__->new;
+  my $path = $self->get_edges;
+
+  foreach my $edge (@$path) {
+    $copy->add_edge( $edge->copy );
+  }
+  return $copy;
 }
 
 

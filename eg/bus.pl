@@ -34,7 +34,15 @@ my $Graph  = parse_data();
 
 # Change the points searched.
 
-my $Routes = $Graph->find_paths('KRKCDY', 'STANDR', { alternates => 1 });
+my $Routes = $Graph->find_paths(
+  'KRKCDY', 'STANDR',
+  {
+   alternates => 1,
+   earliest   => parse_time('08:00'),
+   latest     => parse_time('11:00'),
+   max_time   => parse_time('02:00'),
+  }
+);
 
 print "-"x40, "\n";
 
@@ -44,12 +52,6 @@ if (@$Routes) {
     if ($route->has_cycle) {
       croak "Route should not have cycles";
     }
-
-#     print join("\n", map { "*" . $_->path_id . " "
-# 			     . $_->origin . " " . $_->destination }
-#           @{$route->get_edges} ), "\n";
-
-    # Mysterious bug: if we compress it, it seems that the uncompressed route is invalid.  But if we use the uncompressed route, it appears fine. Why?
 
     my $trip = $route->compressed;
 
@@ -83,6 +85,7 @@ sub unparse_time {
 
 sub parse_time {
   my $time = shift;
+  $time =~ s/(\d\d)\:(\d\d)/$1$2/;
   my $hour = 0+substr($time,0,2);
   my $min  = 0+substr($time,2,2);
   return $min+(60*$hour);
@@ -252,8 +255,6 @@ X26	LEVEN	2015	KRKCDY	2045	DNFMLN	2117
 
 32	GLNRTH	1910	KRKCDY	2006
 32	GLNRTH	2110	KRKCDY	2206
-
-
 
 37	KRKCDY	0600	GLNRTH	0635
 37	KRKCDY	0700	GLNRTH	0747

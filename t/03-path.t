@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 53;
+use Test::More tests => 80;
 BEGIN {
   use_ok('Algorithm::ScheduledPath::Edge');
   use_ok('Algorithm::ScheduledPath::Path');
@@ -47,4 +47,16 @@ ok(@$legs == $p->size);
 
 foreach my $leg (@$legs) {
   ok( $leg->isa("Algorithm::ScheduledPath::Edge") );
+}
+
+my $c = $p->copy;
+my $clegs = $c->get_edges;
+ok(@$legs == @$clegs);
+ok($p->size == $c->size);
+ok(@$clegs == $c->size);
+
+foreach my $i (0..($p->size-1)) {
+  foreach my $method (qw( id path_id origin depart_time destination arrive_time )) {
+    ok( ($legs->[$i]->$method||'') eq ($clegs->[$i]->$method||'') );
+  }
 }

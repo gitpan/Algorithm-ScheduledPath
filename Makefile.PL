@@ -6,6 +6,7 @@ WriteMakefile
           'VERSION_FROM' => 'lib/Algorithm/ScheduledPath.pm',
           'PREREQ_PM' => {
                            'Carp' => '0',
+                           'Carp::Assert' => '0',
                            'Class::Accessor::Fast' => '0',
                            'Test::More' => '0',
                            'base' => '0'

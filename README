@@ -1,6 +1,67 @@
 NAME
     Algorithm::ScheduledPath - Find scheduled paths in a directed graph
 
+REQUIREMENTS
+    The following non-standard modules are used:
+
+      Carp::Assert
+      Class::Accessor::Fast
+
+Installation
+    Installation can be done using the traditional Makefile.PL or the
+    newer Build.PL methods.
+
+    Using Makefile.PL:
+
+      perl Makefile.PL
+      make
+      make test
+      make install
+
+    (On Windows platforms you should use nmake instead.)
+
+    Using Build.PL (if you have Module::Build installed):
+
+      perl Build.PL
+      perl Build
+      perl Build test
+      perl Build install    
+
+SYNOPSIS
+      use Algorithm::ScheduledPath;
+      use Algorithm::ScheduledPath::Path;
+
+      $graph = new Algorithm::ScheduledPath();
+
+      $graph->add_edge(
+        {
+          path_id     => 'R',
+          origin      => 'A', depart_time =>   1,
+          destination => 'B', arrive_time =>   4,
+        },
+        {
+          path_id     => 'R',
+          origin      => 'B', depart_time =>   5,
+          destination => 'C', arrive_time =>   9,
+        },
+        {
+          path_id     => 'D',
+          origin      => 'A', depart_time =>   2,
+          destination => 'C', arrive_time =>   7,
+        }
+      );
+
+      my $paths = $graph->find_paths('A', 'C');
+
+      # Outputs the following:
+      #  A 2 C 7
+      #  A 1 C 9
+
+      foreach my $path (@$paths) {
+        print join(" ", map { $path->$_ } (qw(
+          origin depart_time destination arrive_time ))), "\n";
+      }
+
 DESCRIPTION
     This module is designed to find scheduled paths between vertices in a
     directed graph. For scheduled paths, each edge has a *time schedule*, so
@@ -12,11 +73,23 @@ DESCRIPTION
     series of interconnected bus routes and determine a schedule of how to
     get from point 'A' to point 'B' (noting any transfers in between).
 
-REVISION HISTORY
-    The interface has been changed in v0.40.  Programs which use earlier
-    versions of this package may not be compatible.
+    More details can be found in the module documentation and example
+    scripts.
 
-    0.40_01 Nov 10 2004
+REVISION HISTORY
+    Changes since v0.31 (possibly incompatible changes marked with
+    an asterisk):
+
+    0.40 Nov 12 2004 (Developer Version)
+	* requires Carp::Assert for debugging behavior
+	- fixed bug with fetching earliest times
+	- added latest time value option in find_paths
+	- secondary sorting order by travel time
+	- added rudimentary test for cycles (tests need improvement)
+	- fixed bug in Edge::copy method (rt.cpan.org #8370)
+	- Edge::copy method only copies defined attributes
+	- updated/added documentation
+	- added Path::copy method for completeness sake
 	* aliases for compatability removed
 	- if a hash is passed to Path::add_edges method, it will pass the
 	  hash to Edge::new
@@ -29,12 +102,29 @@ REVISION HISTORY
 	- Path module: num_edges renamed to size (alias added for compat)
 	- Path module internals rewritten for speed
 
+    0.32  Nov 7 2004 (Developer Version)
+	- updates to documentation
+	- fixed typos in code
+	- added has_vertices and has_cycle methods to Path module
+	- fixed cycle bug (rt.cpan.org bug #8248)
+ 	- modified example script to includes cases where bug shows up
+	- in modules, renamed *_leg functions to *_edge
+          (though aliases were added for compatability)
+	- minor optimizations
+	- removal of 'edge_sort' alias
+	- fixed typos in documentation
+
+    A complete revision history can be found in the Changes file.
+
 CAVEATS
-    This module does not do any kind of sophisticated searching techniques
-    for finding paths or determining the most efficient schedule. It is a
-    hand-rolled recursive method that appears correct but I have not done
-    any proofs of the method. The sorting techniques are certainly not
-    optimized. It has not been tested on huge datasets.
+    The algorithm in this module is a brute-force search for all possible
+    non-cyclic paths between vertices. No serious attempts have been made to
+    optimize it.
+
+    It is a hand-rolled method that appears correct, but I have not
+    attempted any formal proofs of the algorithm.
+
+    It has not been tested on huge datasets.
 
 AUTHOR
     Robert Rothenberg <rrwo at cpan.org>
@@ -46,6 +136,6 @@ LICENSE
 
 SEE ALSO
     If you are looking for a generic (un)directed graph module, see the
-    Graph package. (This module does not make use of that package
-    intentionally.)
+    Graph package.
+
 

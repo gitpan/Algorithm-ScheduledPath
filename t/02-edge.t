@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 37;
+use Test::More tests => 51;
 BEGIN {
   use_ok('Algorithm::ScheduledPath::Edge');
 };
@@ -14,6 +14,13 @@ foreach my $method (qw(
   id path_id origin depart_time destination arrive_time data )) {
   ok($e->$method(++$i));
   ok($e->$method == $i);
+}
+
+my $f = $e->copy;
+foreach my $method (qw(
+  id path_id origin depart_time destination arrive_time data )) {
+  ok(defined $f->$method);
+  ok($e->$method eq $f->$method);
 }
 
 ok($e->travel_time == ($e->arrive_time - $e->depart_time));

@@ -2,6 +2,13 @@
 
 Algorithm::ScheduledPath - Find scheduled paths in a directed graph
 
+=head1 REQUIREMENTS
+
+The following non-standard modules are used:
+
+  Carp::Assert
+  Class::Accessor::Fast
+
 =cut
 
 package Algorithm::ScheduledPath;
@@ -11,12 +18,49 @@ use strict;
 use warnings;
 
 use Carp;
+use Carp::Assert;
 
-use Algorithm::ScheduledPath::Edge 0.40;
+use Algorithm::ScheduledPath::Edge 0.40; # uses Class::Accessor::Fast
 use Algorithm::ScheduledPath::Path 0.40;
 
-our $VERSION = '0.40_01';
+our $VERSION = '0.40_02';
 $VERSION = eval $VERSION;
+
+=head1 SYNOPSIS
+
+  use Algorithm::ScheduledPath;
+  use Algorithm::ScheduledPath::Path;
+
+  $graph = new Algorithm::ScheduledPath();
+
+  $graph->add_edge(
+    {
+      path_id     => 'R',
+      origin      => 'A', depart_time =>   1,
+      destination => 'B', arrive_time =>   4,
+    },
+    {
+      path_id     => 'R',
+      origin      => 'B', depart_time =>   5,
+      destination => 'C', arrive_time =>   9,
+    },
+    {
+      path_id     => 'D',
+      origin      => 'A', depart_time =>   2,
+      destination => 'C', arrive_time =>   7,
+    }
+  );
+
+  my $paths = $graph->find_paths('A', 'C');
+
+  # Outputs the following:
+  #  A 2 C 7
+  #  A 1 C 9
+
+  foreach my $path (@$paths) {
+    print join(" ", map { $path->$_ } (qw(
+      origin depart_time destination arrive_time ))), "\n";
+  }
 
 =head1 DESCRIPTION
 
@@ -66,15 +110,14 @@ sub new {
 
 =item add_edge
 
-  $graph->add_edge(
-    Algorithm::ScheduledPath::Edge->new({
+  $graph->add_edge( {
       id          =>   0, path_id => 1,
       origin      => 'C', depart_time => 300,
       destination => 'D', arrive_time => 400,
-    })
+    }
   );
 
-Adds an edge to the graph.  Arguments must be
+Adds edges to the graph.  Arguments must either be hash references or 
 C<Algorithm::ScheduledPath::Edge> objects.
 
 See L<Algorithm::ScheduledPath::Edge> for more information.
@@ -123,8 +166,10 @@ sub add_edge {
 
 Returns an array reference of L<Algorithm::ScheduledPath::Path>
 objects of any paths between the C<$origin> and C<$dest>.  (C<$origin>
-and C<$dest> are assumed to be strings.)  Results are sorted in the
-earliest arrival time first.
+and C<$dest> are assumed to be strings.)
+
+Results are sorted by the earliest arrival time and then by the
+shorted travel time.
 
 The following options are understood:
 
@@ -136,7 +181,19 @@ Specifies the number of alternate branches to include (defaults to C<1>).
 
 =item earliest
 
-The earliest time value included in the routes (defaults to C<0>).
+The earliest departure time value included in the routes (defaults to
+C<0>).
+
+If edges have negative departure and arrival times, then earliest must
+be defined.
+
+=item latest
+
+The latest arrival time value included in the routes.
+
+=item max_time
+
+The maximum travel time a route may have.
 
 =back
 
@@ -152,20 +209,17 @@ sub find_paths {
   $options->{alternates} = 1, unless (defined $options->{alternates});
   $options->{earliest}   = 0, unless (defined $options->{earliest});
 
+  if ( (defined $options->{latest}) &&
+       ($options->{latest} < $options->{earliest}) ) {
+    croak "latest < earliest";
+  }
+
   $trace         = { $origin => 1, }, unless (defined $trace);
   my $trace_back = { %$trace };
 
   my @routes     = ( );
 
-  my $sort = ($options->{numeric}) ? sub {
-    if ($a == $dest) {
-      return -1;
-    } elsif ($b == $dest) {
-      return 1;
-    } else {
-      return ($a <=> $b); # Note: assumes destinations str sorting
-    }
-  } : sub {
+  my $sort = sub {
     if ($a eq $dest) {
       return -1;
     } elsif ($b eq $dest) {
@@ -190,7 +244,8 @@ sub find_paths {
 
       # We make sure to check the schedules for allowable transfer
       # times (that is, we don't continue on an earlier leg).  We also
-      # limit the number of "connections" to speed up the algorithm.
+      # limit the number of alternative connections to speed up the
+      # algorithm.
 
       # We also make sure to reject paths which are cyclic.
 
@@ -198,24 +253,46 @@ sub find_paths {
 
 	push @routes,
 	  map { Algorithm::ScheduledPath::Path->new($_) }
-	  grep $_->depart_time >= $options->{earliest},
-	    @{ $graph->{$origin}->{$next} };
+	  grep(
+            ( ($_->depart_time >= $options->{earliest}) &&
+              ( (!defined $options->{latest}) ||
+		($_->arrive_time <= $options->{latest}) )
+            ), @{ $graph->{$origin}->{$next} }
+          );
+
       }
       elsif (!exists $trace->{$next}) {
 
 	$trace->{$next}++;
 
+	# Excluding destination vertex and cycles may be redundant.
+
 	my @head = grep(
-          !($_->has_vertex($dest)||$_->has_cycle),
+          ( (!($_->has_vertex($dest)||$_->has_cycle)) 
+          ),
 	  @{ $graph->find_paths($origin, $next, $options, $trace) }
         );
 
 	if (@head) {
 
+	  # We know that the first element of @head has the earliest
+	  # arrival time because we sorted the results (see comment
+	  # below).  We want to make sure connecting edges we search
+	  # for do not depart earlier than the earliest arrival time.
+
 	  my $subopts  = { %$options, earliest => $head[0]->arrive_time, };
 
+	  # Do not search for the tail if the earliest arrival time is
+	  # later than our latest arrival time (actually, this should
+	  # not happen, and probably should be changed to an assertion).
+
+	  assert( (!defined $subopts->{latest}) ||
+	       ($subopts->{latest} >= $subopts->{earliest}) ), if DEBUG; 
+
+	  # Excluding origin vertex and cycles may be redundant.
+
 	  my @tail = grep(
-            (!$_->has_cycle),
+            ( (!($_->has_vertex($origin)||$_->has_cycle)) ),
 	    @{ $graph->find_paths($next, $dest, $subopts, $trace) }
           );
 
@@ -226,27 +303,26 @@ sub find_paths {
 	      # Warning: values are sorted by arrival time, and there
 	      # is nothing to favor continuing a leg on a route id!
 
-	      my @xfers = 
+	      my @connections = 
 		grep( ($route->arrive_time <= $_->depart_time),
 		      @tail
 		    );
 
-	      if (@xfers) {
+	      if (@connections) {
 		for (my $i=0; (($i<$options->{alternates}) &&
-			       ($i<@xfers)); $i++) {
+			       ($i<@connections)); $i++) {
 		  my $path = Algorithm::ScheduledPath::Path->new(
-		       $route, $xfers[$i] );
+		       $route, $connections[$i] );
 
-		  if ($route->destination ne $xfers[$i]->origin) {
-		    croak "Something is wrong: unconnected path";
-		  }
-
-		  # We also reject paths that pass through the same
-		  # vertex more than once (a possibility when we
-		  # concatenate two paths).
+		  assert($route->destination eq $connections[$i]->origin),
+		    if DEBUG;
 
 		  push @routes, $path,
-		    unless ($path->has_cycle);
+		    unless (
+                      $path->has_cycle ||
+		      ( (defined $options->{max_time}) &&
+			($path->travel_time > $options->{max_time}))
+                      );
 		    
 		}
 	      }
@@ -256,6 +332,12 @@ sub find_paths {
 	}
       }
     }
+
+    # We want to always return sorted results so that we know the
+    # first element has the earliest arrival time.  This way we can
+    # use it to specify the earliest departure time for connecting
+    # edges.
+
     return [ sort _by_arrive_time @routes ];
   }
   else {
@@ -265,7 +347,8 @@ sub find_paths {
 }
 
 sub _by_arrive_time {
-  $a->arrive_time <=> $b->arrive_time;
+  $a->arrive_time <=> $b->arrive_time ||
+  $a->travel_time <=> $b->travel_time;
 }
 
 
@@ -273,17 +356,22 @@ sub _by_arrive_time {
 
 =head1 CAVEATS
 
-This module does not do any kind of sophisticated searching techniques
-for finding paths or determining the most efficient schedule. It is a
-hand-rolled recursive method that appears correct but I have not done
-any proofs of the method.  The sorting techniques are certainly not
-optimized.  It has not been tested on huge datasets.
+The algorithm in this module is a brute-force search for all possible
+non-cyclic paths between vertices.  No serious attempts have been made
+to optimize it.
+
+It is a hand-rolled method that appears correct, but I have not
+attempted any formal proofs of the algorithm.
+
+It has not been tested on huge datasets.
 
 =cut
 
 =head1 AUTHOR
 
 Robert Rothenberg <rrwo at cpan.org>
+
+Please submit bug reports and suggestions to the L<http://rt.cpan.org>.
 
 =head1 LICENSE
 

@@ -1,6 +1,15 @@
 Revision history for Perl extension Algorithm::ScheduledPath.
 
-0.40  Nov 10 2004
+0.40
+	* requires Carp::Assert for debugging behavior
+	- fixed bug with fetching earliest times
+	- added latest time value option in find_paths
+	- secondary sorting order by travel time
+	- added rudimentary test for cycles (tests need improvement)
+	- fixed bug in Edge::copy method (rt.cpan.org #8370)
+	- Edge::copy method only copies defined attributes
+	- updated/added documentation
+	- added Path::copy method for completeness sake
 	* aliases for compatability removed
 	- if a hash is passed to Path::add_edges method, it will pass the
 	  hash to Edge::new
@@ -13,7 +22,7 @@ Revision history for Perl extension Algorithm::ScheduledPath.
 	- Path module: num_edges renamed to size (alias added for compat)
 	- Path module internals rewritten for speed
 
-0.32  Nov 7 2004 (Beta)
+0.32  Nov 7 2004 (Developer Version)
 	- updates to documentation
 	- fixed typos in code
 	- added has_vertices and has_cycle methods to Path module

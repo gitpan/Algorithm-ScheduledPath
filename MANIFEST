@@ -1,6 +1,7 @@
 Build.PL
 Changes
 eg/bus.pl
+eg/synopsis.pl
 Makefile.PL
 MANIFEST
 META.yml
@@ -9,6 +10,7 @@ t/01-load.t
 t/02-edge.t
 t/03-path.t
 t/04-graph.t
+t/05-cycle.t
 lib/Algorithm/ScheduledPath.pm
 lib/Algorithm/ScheduledPath/Edge.pm
 lib/Algorithm/ScheduledPath/Path.pm
