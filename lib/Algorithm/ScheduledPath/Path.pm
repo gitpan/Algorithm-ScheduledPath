@@ -10,7 +10,7 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '0.30';
+our $VERSION = '0.32';
 
 use Carp;
 use Algorithm::ScheduledPath::Edge;
@@ -34,26 +34,26 @@ sub new {
   bless $route, $class;
 
   if (@_) {
-    while (my $leg = shift) {
-      $route->add_leg($leg);
+    while (my $edge = shift) {
+      $route->add_edge($edge);
     }
   }
 
   return $route;
 }
 
-=item add_leg
+=item add_edge
 
 =cut
 
-sub add_leg {
+sub add_edge {
   my $route = shift;
-  while (my $leg = shift) {
-    if ($leg->isa("Algorithm::ScheduledPath::Edge")) {
-      push @{$route}, $leg;
+  while (my $edge = shift) {
+    if ($edge->isa("Algorithm::ScheduledPath::Edge")) {
+      push @{$route}, $edge;
     }
-    elsif ($leg->isa(__PACKAGE__)) {
-      $route->add_leg( @{$leg->get_legs} );
+    elsif ($edge->isa(__PACKAGE__)) {
+      $route->add_edge( @{$edge->get_edges} );
     }
     else {
       croak "expected ".__PACKAGE__;
@@ -62,11 +62,11 @@ sub add_leg {
   return $route;
 }
 
-=item first_leg
+=item first_edge
 
 =cut
 
-sub first_leg {
+sub first_edge {
   my $route = shift;
   if (@$route) {
     return $route->[0];
@@ -76,11 +76,11 @@ sub first_leg {
   }
 }
 
-=item last_leg
+=item last_edge
 
 =cut
 
-sub last_leg {
+sub last_edge {
   my $route = shift;
   if (@$route) {
     return $route->[-1];
@@ -97,7 +97,7 @@ sub last_leg {
 
 sub depart_time {
   my $route = shift;
-  return $route->first_leg->depart_time;
+  return $route->first_edge->depart_time;
 }
 
 =item arrive_time
@@ -106,7 +106,7 @@ sub depart_time {
 
 sub arrive_time {
   my $route = shift;
-  return $route->last_leg->arrive_time;
+  return $route->last_edge->arrive_time;
 }
 
 =item travel_time
@@ -119,31 +119,73 @@ sub travel_time {
   return ($route->arrive_time - $route->depart_time);
 }
 
-=item get_legs
+=item get_edges
 
-  @edges = @{ $path->get_legs };
+  @edges = @{ $path->get_edges };
 
 Returns a reference to an array containing the component
 L<Algorithm::ScheduledPath::Edge> objects.
 
 =cut
 
-sub get_legs {
+sub get_edges {
   my $route = shift;
   return [ @{$route} ];
 }
 
-=item num_legs
+=item num_edges
 
-  $size = $path->num_legs;
+  $size = $path->num_edges;
 
-Returns the number of legs (edges) in the path.
+Returns the number of edges in the path.
 
 =cut
 
-sub num_legs {
+sub num_edges {
   my $route = shift;
   return scalar( @{$route} );
+}
+
+=item has_vertex
+
+  if ($path->has_vertex('LEV')) { ... }
+
+Returns true if a path passes through a given vertex.
+
+=cut
+
+sub has_vertex {
+  my $route = shift;
+  my $vertex = shift;
+  if ($route->first_edge->origin eq $vertex) {
+    return 1;
+  }
+  foreach my $edge ( @$route ) {
+    if ($edge->destination eq $vertex) {
+      return 1;
+    }
+  }
+  return;
+}
+
+=item has_cycle
+
+  if ($path->has_cycle) { ... }
+
+Returns true if the path has a "cycle" (that is, if it passes through
+the same vertex more than once).
+
+=cut
+
+sub has_cycle {
+  my $route = shift;
+  my %vertices = ( $route->first_edge->origin => 1, );
+  foreach my $edge ( @$route ) {
+    if (++$vertices{ $edge->destination } > 1) {
+      return 1;
+    }
+  }
+  return;
 }
 
 =item compressed
@@ -151,7 +193,7 @@ sub num_legs {
   $cpath = $path->compressed;
 
 Produces a "compressed" version of the path, where sequential edges
-(legs) sharing the same path identifier are merged.  The result may be
+sharing the same path identifier are merged.  The result may be
 a path with "virtual" edges.
 
 For instance, if the path represents a route one might take on a bus
@@ -166,24 +208,35 @@ number of transfers.)
 sub compressed {
   my $route = shift;
   my $comp  = __PACKAGE__->new;
-  foreach my $leg (@$route) {
-    if ($comp->num_legs) {
-      if ($comp->last_leg->path_id eq $leg->path_id) {
+  foreach my $edge (@$route) {
+    if ($comp->num_edges) {
+      if ($comp->last_edge->path_id eq $edge->path_id) {
 	foreach my $method (qw( destination arrive_time )) {
-	  $comp->last_leg->$method( $leg->$method );
+	  $comp->last_edge->$method( $edge->$method );
 	}
-	carp "data() attribute will be lost", if (defined $leg->data);
+	carp "data() attribute will be lost", if (defined $edge->data);
       }
       else {
-	$comp->add_leg($leg);
+	$comp->add_edge($edge);
       }
     }
     else {
-      $comp->add_leg($leg);
+      $comp->add_edge($edge);
     }
   }
   return $comp;
 }
+
+# alias to maintain compatiability with version prior to 0.32
+
+BEGIN {
+  *add_leg   = \&add_edge;
+  *first_leg = \&first_edge;
+  *last_leg  = \&last_edge;
+  *get_legs  = \&get_edges;
+  *num_legs  = \&num_edges;
+}
+
 
 =back
 

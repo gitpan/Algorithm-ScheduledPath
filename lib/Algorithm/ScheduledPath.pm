@@ -1,6 +1,6 @@
 =head1 NAME
 
-Algorithm::ScheduledPath - find scheduled paths in a directed graph
+Algorithm::ScheduledPath - Find scheduled paths in a directed graph
 
 =cut
 
@@ -11,17 +11,22 @@ use strict;
 use warnings;
 
 use Carp;
-# use Carp::Assert;
 
-our $VERSION = '0.31';
+use Algorithm::ScheduledPath::Edge 0.32;
+use Algorithm::ScheduledPath::Path 0.32;
+
+our $VERSION = '0.32_01';
+$VERSION = eval $VERSION;
 
 =head1 DESCRIPTION
 
-This module is designed to find scheduled paths in directed graph.
+This module is designed to find scheduled paths between vertices in a
+directed graph.  For scheduled paths, each edge has a I<time schedule>,
+so they a path must contain edges with successivly later schedules.
 
-In less technical parlance, it lets you do things like take a series
-of interconnected bus routes and determine a schedule of how to get
-from point 'A' to point 'B' (noting any transfers in between).
+In less technical parlance, this module lets you do things like take a
+series of interconnected bus routes and determine a schedule of how to
+get from point 'A' to point 'B' (noting any transfers in between).
 
 =head2 Methods
 
@@ -43,7 +48,7 @@ from point 'A' to point 'B' (noting any transfers in between).
   );
 
 Creates a new graph, and adds edges if they are specified.
-(See L</add_leg> for more details.)
+(See L</add_edge> for more details.)
 
 =cut
 
@@ -52,14 +57,14 @@ sub new {
   my $graph = { };
   bless $graph, $class;
   if (@_) {
-    $graph->add_leg(@_);
+    $graph->add_edge(@_);
   }
   return $graph;
 }
 
-=item add_leg
+=item add_edge
 
-  $graph->add_leg(
+  $graph->add_edge(
     Algorithm::ScheduledPath::Edge->new({
       id          =>   0, path_id => 1,
       origin      => 'C', depart_time => 300,
@@ -67,14 +72,14 @@ sub new {
     })
   );
 
-Adds an edge (leg) to the graph.  Arguments must be
+Adds an edge to the graph.  Arguments must be
 C<Algorithm::ScheduledPath::Edge> objects.
 
 See L<Algorithm::ScheduledPath::Edge> for more information.
 
 =cut
 
-sub add_leg {
+sub add_edge {
   my $graph = shift;
 
   while (my $leg = shift) {
@@ -91,6 +96,7 @@ sub add_leg {
     $graph->{$leg->origin} = { },
       unless (exists $graph->{$leg->origin});
 
+    
     $graph->{$leg->origin}->{$leg->destination} = [ ],
       unless (exists $graph->{$leg->origin}->{$leg->destination});
 
@@ -102,6 +108,10 @@ sub add_leg {
   return $graph;
 }
 
+BEGIN {
+  *add_leg = \&add_edge; # alias to maintain compatability w/v<0.32
+}
+
 =item find_routes
 
   $routes = $graph->find_routes( $origin, $dest );
@@ -111,7 +121,9 @@ sub add_leg {
   $routes = $graph->find_routes( $origin, $dest, $count, $earliest );
 
 Returns an array reference of L<Algorithm::ScheduledPath::Path>
-objects.  Results are sorted in the earliest arrival time first.
+objects of any paths betweeb the C<$origin> and C<$dest>.  (C<$origin>
+and C<$dest> are assumed to be strings.)  Results are sorted in the
+earliest arrival time first.
 
 C<$count> specifies the number of alternate branches to include (it
 defaults to C<1>).
@@ -133,8 +145,18 @@ sub find_routes {
 
   my @routes     = ( );
 
+  my $sort = sub {
+    if ($a eq $dest) {
+      return -1;
+    } elsif ($b eq $dest) {
+      return 1;
+    } else {
+      return ($a cmp $b); # Note: assumes destinations str sorting
+    }
+  };
+
   if (exists $graph->{$origin}) {
-    foreach my $next (keys %{ $graph->{$origin} }) {
+    foreach my $next (sort $sort keys %{ $graph->{$origin} }) {
 
       $trace = $trace_back;
 
@@ -145,7 +167,6 @@ sub find_routes {
       # recursively to see if they have a common edge with the
       # destination (taking care not to follow previously covered
       # vertices).
-      #
 
       # We make sure to check the schedules for allowable transfer
       # times (that is, we don't continue on an earlier leg).  We also
@@ -155,7 +176,6 @@ sub find_routes {
 
 	push @routes,
 	  map { Algorithm::ScheduledPath::Path->new($_) }
-	  sort edge_sort
 	  grep $_->depart_time >= $depart, @{ $graph->{$origin}->{$next} };
       }
       elsif (!exists $trace->{$next}) {
@@ -173,32 +193,40 @@ sub find_routes {
 
 	  if (@$tail) {
 
-	    foreach my $route (sort edge_sort @$head) {
-	      if (defined $route) {
+	    foreach my $route (@$head) { # sort _by_arrive_time
+
+	      # the "head" path could theorestically pass through our
+	      # destination, so we ignore these
+
+	      unless ($route->has_vertex($dest)) {
 
 		# Warning: values are sorted by arrival time, and there
 		# is nothing to favor continuing a leg on a route id!
 
 		my @xfers = 
 		  grep( ($route->arrive_time <= $_->depart_time),
-			sort edge_sort @$tail);
+			@$tail); #  
 
 		if (@xfers) {
 		  for (my $i=0; (($i<$connects) && ($i<@xfers)); $i++) {
-		    push @routes, Algorithm::ScheduledPath::Path->new(
-								      $route, $xfers[$i] );
+		    my $path = Algorithm::ScheduledPath::Path->new(
+		      $route, $xfers[$i] );
+
+		    # We also reject paths that pass through the same
+		    # vertex more than once
+
+		    push @routes, $path,
+		      unless ($path->has_cycle);
+		    
 		  }
 		}
-	      } else {
-		croak "Something\'s wrong";
-		# assert(0), if DEBUG;
 	      }
 	    }
 	  }
 	}
       }
     }
-    return \@routes;
+    return [ sort _by_arrive_time @routes ];
   }
   else {
     return [ ];
@@ -206,26 +234,10 @@ sub find_routes {
 
 }
 
-# =item edge_sort
-# 
-# An "internal" routine for sorting edges in routes.  This can be
-# changed in a subclass for alternative sorting behavior.
-# 
-# =cut
-
-# sub _by_depart_time {
-#   $a->depart_time <=> $b->depart_time;
-# }
-
 sub _by_arrive_time {
   $a->arrive_time <=> $b->arrive_time;
 }
 
-# We use an alias so it can be changed in a subclass
-
-BEGIN {
-  *edge_sort = \&_by_arrive_time;
-}
 
 =back
 
@@ -254,6 +266,12 @@ Robert Rothenberg <rrwo at cpan.org>
 Copyright (c) 2004 Robert Rothenberg. All rights reserved.  This
 program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
+
+=head1 SEE ALSO
+
+If you are looking for a generic (un)directed graph module, see the
+L<Graph> package.  (This module does not make use of that package
+intentionally.)
 
 =cut
 

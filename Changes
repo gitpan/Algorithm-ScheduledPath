@@ -1,5 +1,15 @@
 Revision history for Perl extension Algorithm::ScheduledPath.
 
+0.32
+	- added has_vertices and has_cycle methods to Path module
+	- fixed cycle bug (rt.cpan.org bug #8248)
+ 	- modified example script to includes cases where bug shows up
+	- in modules, renamed *_leg functions to *_edge
+          (though aliases were added for compatability)
+	- minor optimizations
+	- removal of 'edge_sort' alias
+	- fixed typos in documentation
+
 0.31  Nov  4 2004
 	- added example script
 	- added documentation

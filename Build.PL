@@ -8,7 +8,6 @@ my $build = Module::Build->new
        'base'                       => 0,
        'perl'                       => '5.6.1',
        'Carp'                       => 0,
-#        'Carp::Assert'               => 0,
        'Class::Accessor::Fast'      => 0,
      },
      recommends => {

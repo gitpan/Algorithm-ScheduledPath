@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 45;
+use Test::More tests => 49;
 BEGIN {
   use_ok('Algorithm::ScheduledPath::Edge');
   use_ok('Algorithm::ScheduledPath::Path');
@@ -30,6 +30,10 @@ for(my $i=1; $i<=4; $i++) {
   ok( $p->depart_time == 10 );
   ok( $p->arrive_time == ((10*$i)+9) );
   ok( $p->travel_time == ((10*($i-1))+9) );
+}
+
+for(my $i=1; $i<=4; $i++) {
+  ok( $p->has_vertex($i) );
 }
 
 ok( $p->compressed->num_legs == 3 );

@@ -12,7 +12,7 @@ use warnings;
 
 use base 'Class::Accessor::Fast';
 
-our $VERSION = '0.30';
+our $VERSION = '0.32';
 
 =head1 DESCRIPTION
 
@@ -96,7 +96,7 @@ __PACKAGE__->mk_accessors(qw(
 
 =item travel_time
 
-  $time = travel_time;
+  $time = $edge->travel_time;
 
 Returns the difference between the departure and arrival times.
 

@@ -1,9 +1,9 @@
 --- #YAML:1.0
 name: Algorithm-ScheduledPath
-version: 0.31
+version: 0.32_01
 author:
   - Robert Rothenberg <rrwo at cpan.org>
-abstract: find scheduled paths in a directed graph
+abstract: Find scheduled paths in a directed graph
 license: perl
 requires:
   Carp: 0
@@ -15,11 +15,11 @@ build_requires:
 provides:
   Algorithm::ScheduledPath:
     file: lib/Algorithm/ScheduledPath.pm
-    version: 0.31
+    version: 0.32_01
   Algorithm::ScheduledPath::Edge:
     file: lib/Algorithm/ScheduledPath/Edge.pm
-    version: 0.30
+    version: 0.32
   Algorithm::ScheduledPath::Path:
     file: lib/Algorithm/ScheduledPath/Path.pm
-    version: 0.30
+    version: 0.32
 generated_by: Module::Build version 0.25_02
