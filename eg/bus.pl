@@ -1,10 +1,11 @@
 #!/usr/bin/perl
 
-# bus.pl v0.41.3
+# bus.pl v0.41.5
 
-# Robert Rothenberg <rrwo@cpan.org> Copyright (C) 2004.  All Rights
-# Reserved.  This program is free software; you can redistribute it
-# and/or modify it under the same terms as Perl itself.
+# Robert Rothenberg <rrwo@cpan.org> Copyright (C) 2004-2005.  All
+# Rights Reserved.  This program is free software; you can
+# redistribute it and/or modify it under the same terms as Perl
+# itself.
 
 # This is a demonstration of how to use the Algorithm::ScheduledPath
 # module.  It builds a directed graph out of bus route information
@@ -69,16 +70,16 @@ my $Routes = $Graph->find_paths(
        ( (!defined $options->{max_transfer_time}) ||
 	 ($xfer_max <= $options->{max_transfer_time}) ) &&
        ( (!defined $options->{min_transfer_time}) ||
-	 ($xfer_min >= $options->{min_transfer_time}) ) &&
-       ( (!defined $options->{max_transfers}) ||
-	 ($xfer_count <= $options->{max_transfers}) ) &&
-       ( (!defined $options->{pass_through}) || ($index == 0) ||
-	 ( $path->has_vertex($options->{pass_through}) ) );
+	 ($xfer_min >= $options->{min_transfer_time}) )  &&
+        ( (!defined $options->{max_transfers}) ||
+ 	 ($xfer_count <= $options->{max_transfers}) )  # &&
+#        ( (!defined $options->{pass_through}) || ($index == 0) ||
+# 	 ( $path->has_vertex($options->{pass_through}) ) );
    },
-   pass_through      => undef,
+#    pass_through      => undef,
    max_transfers     =>  1,     # we don't want to transfer too much
    min_transfer_time =>  5,     # we want at least 5 min between xfers
-   max_transfer_time => 30,     # we don't want to wait more than 15 min
+   max_transfer_time => 15,     # we don't want to wait more than 15 min
   }
 );
 
@@ -380,11 +381,13 @@ X54	DNFMLN	1905	GLNRTH	1935
 X54	DNFMLN	2001	GLNRTH	2031
 
 X60	LEVEN	0555	STANDR	0630
+X59	GLNRTH	0635	CUPAR	0656
 X60	LEVEN	0641	STANDR	0715
 X60	LEVEN	0716	STANDR	0751
-X59	KRKCDY	0814	GLNRTH	0835	CUPAR	0856
+X59	GLNRTH	0727	CUPAR	0748
+X59	KRKCDY	0809/0814	GLNRTH	0830/0835	CUPAR	0856
 X60	LEVEN	0806	STANDR	0841
-X59	KRKCDY	0909	GLNRTH	0930	CUPAR	0951
+X59	KRKCDY	0909	GLNRTH	0925/0930	CUPAR	0951
 X60	LEVEN	0916	STANDR	0951
 X60	KRKCDY	0948	LEVEN	1016	STANDR	1051
 X59	KRKCDY	1008	GLNRTH	1029	CUPAR	1050

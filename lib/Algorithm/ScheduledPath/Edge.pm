@@ -84,8 +84,8 @@ use 5.006;
 use strict;
 use warnings::register;
 
-our $VERSION = '0.41_02';
-$VERSION = eval $VERSION;
+our $VERSION = '0.41';
+# $VERSION = eval $VERSION;
 
 use Carp;
 use Class::Meta 0.44;

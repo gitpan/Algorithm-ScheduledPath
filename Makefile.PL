@@ -9,7 +9,7 @@ WriteMakefile
                            'Carp::Assert' => '0',
                            'Class::Meta' => '0.44',
                            'Clone' => '0.15',
-                           'Data::Types' => '0.03',
+                           'Data::Types' => '0.05',
                            'Scalar::Util' => '1.1',
                            'Test::Exception' => '0',
                            'Test::More' => '0',

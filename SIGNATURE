@@ -1,0 +1,40 @@
+This file contains message digests of all files listed in MANIFEST,
+signed via the Module::Signature module, version 0.44.
+
+To verify the content in this distribution, first make sure you have
+Module::Signature installed, then type:
+
+    % cpansign -v
+
+It will check each file's integrity, as well as the signature's
+validity.  If "==> Signature verified OK! <==" is not displayed,
+the distribution may already have been compromised, and you should
+not run its Makefile.PL or Build.PL.
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+SHA1 e5d1cd5e4f25792ef6c195930091276ba1835982 Build.PL
+SHA1 07516746c5e40fa6344b935e4cb458371f9dc225 Changes
+SHA1 1c9a34064818a55e0aa9f0c53e6e26ea955cf81f MANIFEST
+SHA1 b3c94836a743afb88febdc4ea62b0e26235b25eb META.yml
+SHA1 dbab070e266dbc43d7f22e4085d2820411b2162f Makefile.PL
+SHA1 9819080e1de597b526df6f66725a35700d8a5478 README
+SHA1 a19421a9978259b406f0ca56d1532c7d83884bca eg/bus.pl
+SHA1 9373767b974fb99c2aab01ab1f593b5a39d86b1e eg/synopsis.pl
+SHA1 424f485bc2c02101b123a0f34f8a29bf30492018 lib/Algorithm/ScheduledPath.pm
+SHA1 0182a6c4f71d28a70f9b1f11bc7712c4ab051bef lib/Algorithm/ScheduledPath/Edge.pm
+SHA1 868f7b8e79e0a93ff79ac9e1e3eb0ce19ba08544 lib/Algorithm/ScheduledPath/Path.pm
+SHA1 4d96504e6080db5c88e795a5113dc5060761ce09 t/01-load.t
+SHA1 55c1d2f3bc88dbdf25f135a3f04c6ec23b818a18 t/01-types.t
+SHA1 7d9416d06585e3da8f6d85b4f590f3cc94a095b8 t/02-edge.t
+SHA1 7a6fd13e3a411fd40af7d288573b4019213a91db t/03-path.t
+SHA1 c989b49092992a071cc13ddfbaf1c8c525748a1f t/04-graph.t
+SHA1 157264e171f1b979c19cc0a48aa2a82c331e0289 t/05-cycle.t
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.2.5 (MingW32)
+
+iD8DBQFB8rtEV485gMKcmRARAk0FAJ9G+ke2vQjhmrWImNilztUzlv6aMQCffnGG
+QtYissGmJK9eDdzICILXJ0k=
+=nA8h
+-----END PGP SIGNATURE-----

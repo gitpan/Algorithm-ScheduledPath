@@ -8,6 +8,7 @@ The following non-standard modules are used:
 
   Carp::Assert
   Class::Meta
+  Data::Types
   Scalar::Util
 
 =cut
@@ -24,8 +25,8 @@ use Carp::Assert;
 use Algorithm::ScheduledPath::Edge 0.41; # uses Class::Meta
 use Algorithm::ScheduledPath::Path 0.41;
 
-our $VERSION = '0.41_02';
-$VERSION = eval $VERSION;
+our $VERSION = '0.41';
+# $VERSION = eval $VERSION;
 
 =head1 SYNOPSIS
 
@@ -239,10 +240,13 @@ all paths to pass through a given vertex:
    callback => sub {
      my ($path, $options, $index) = @_;
      return ( ($index == 0) ||
-	      (!defined $options->{pass_through}) ||
-	      $path->has_vertex($options->{pass_through})
+              (!defined $options->{pass_through}) ||
+              $path->has_vertex($options->{pass_through})
      );
    },
+
+Note that the above example will not work properly for long paths as
+it requires all subpaths to pass through a vertex.
 
 An example of using callbacks to filter results is in the F<eg/bus.pl>
 script included with the distribution.
@@ -445,7 +449,7 @@ type checking for "string-like" and "number-like" objects.
 
 =head1 LICENSE
 
-Copyright (c) 2004 Robert Rothenberg. All rights reserved.  This
+Copyright (c) 2004-2005 Robert Rothenberg. All rights reserved.  This
 program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 

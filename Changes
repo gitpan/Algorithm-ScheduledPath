@@ -1,6 +1,11 @@
-Revision history for Perl extension Algorithm::ScheduledPath.
+Revision history for Perl extension Algorithm::ScheduledPath.  An
+asterisk ('*') indicates a potential incompatability with previous
+versions.
 
-0.41   Nov 21 2004 (Developer Version) 
+0.41   Sat Jan 22 2005
+	- commented-out passthrough option in bus.pl since it will
+          filter valid subpaths incorrectly
+	- corrected inaccurate REQUIREMENTS section in POD, README
 	- explicitly uses Data::Types module
 	* uses Scalar::Util module
 	- fixed bugs in strinklike and numberlike test functions

@@ -15,3 +15,4 @@ t/05-cycle.t
 lib/Algorithm/ScheduledPath.pm
 lib/Algorithm/ScheduledPath/Edge.pm
 lib/Algorithm/ScheduledPath/Path.pm
+SIGNATURE    Added here by Module::Build

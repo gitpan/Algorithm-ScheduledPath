@@ -10,8 +10,8 @@ use 5.006;
 use strict;
 use warnings::register;
 
-our $VERSION = '0.41_01';
-$VERSION = eval $VERSION;
+our $VERSION = '0.41';
+# $VERSION = eval $VERSION;
 
 use Carp;
 use Algorithm::ScheduledPath::Edge 0.41;

@@ -10,7 +10,7 @@ my $build = Module::Build->new
        'Carp::Assert'               => 0,
        'Class::Meta'                => 0.44,
        'Clone'                      => 0.15,
-       'Data::Types'                => 0.03,
+       'Data::Types'                => 0.05,
        'Scalar::Util'               => 1.10,
        'overload'                   => 0,
      },
@@ -23,6 +23,7 @@ my $build = Module::Build->new
      },
      create_makefile_pl => 'traditional',
      dist_author        => 'Robert Rothenberg <rrwo at cpan.org>',
+     sign               => 1,
 );
 
 $build->create_build_script;
