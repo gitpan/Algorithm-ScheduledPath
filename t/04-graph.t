@@ -12,41 +12,41 @@ ok(defined $g);
 ok($g->isa("Algorithm::ScheduledPath"));
 
 $g->add_edge(
-  new Algorithm::ScheduledPath::Edge({
+  new Algorithm::ScheduledPath::Edge(
     path_id     =>   1,
     origin      => 'A', depart_time =>   0,
     destination => 'B', arrive_time =>  10,
-  }),
+  ),
 )->add_edge(
-  new Algorithm::ScheduledPath::Edge({
+  new Algorithm::ScheduledPath::Edge(
     path_id     =>   2,
     origin      => 'B', depart_time =>  11,
     destination => 'C', arrive_time =>  20,
-  }),
+  ),
 )->add_edge(
-  new Algorithm::ScheduledPath::Edge({
+  new Algorithm::ScheduledPath::Edge(
     path_id     =>   3,
     origin      => 'C', depart_time =>  21,
     destination => 'A', arrive_time =>  30,
-  }),
+  ),
 )->add_edge(
-  new Algorithm::ScheduledPath::Edge({
+  new Algorithm::ScheduledPath::Edge(
     path_id     =>   4,
     origin      => 'A', depart_time =>   5,
     destination => 'C', arrive_time =>  15,
-  }),
+  ),
 )->add_edge(
-  new Algorithm::ScheduledPath::Edge({
+  new Algorithm::ScheduledPath::Edge(
     path_id     =>   4,
     origin      => 'C', depart_time =>  16,
     destination => 'D', arrive_time =>  20,
-  }),
+  ),
 )->add_edge(
-  new Algorithm::ScheduledPath::Edge({
+  {
     path_id     =>   1,
     origin      => 'B', depart_time =>  11,
     destination => 'D', arrive_time =>  20,
-  }),
+  },
 )->add_edge(
   {
     path_id     =>   1,

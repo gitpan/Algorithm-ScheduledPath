@@ -1,6 +1,27 @@
 Revision history for Perl extension Algorithm::ScheduledPath.
 
-0.40
+0.41  Nov 14 2004 (Developer Version)
+	- path_id, origin and destination can be objects so long as they
+	  have string conversion and comparison overloaded; likewise,
+	  depart_time and arrive_time can be objects so long as they too
+          have numeric conversion and comparison overloaded.
+	* copy methods renamed to clone
+	* uses Clone module
+	- more documentation updates
+	- when copying edge, warning when data contains a reference
+	* interface for Edge::new constructor is changed: it no longer
+          accepts hash references for arguments
+	* uses Class::Meta instead of Class::Accessor
+	- modules register warnings (warnings only when enabled)
+	- added more tests
+	- Path::add_edge checks that arrive_time >= depart_time
+	* requires Test::Exception and Test::Warn for tests
+	- added use of callback in eg/bus.pl demo
+	- added callback option in find_paths
+	- corrected typos in documentation
+
+0.40  Nov 12 2004 (Developer Version)
+	- updated README
 	* requires Carp::Assert for debugging behavior
 	- fixed bug with fetching earliest times
 	- added latest time value option in find_paths

@@ -7,9 +7,11 @@ WriteMakefile
           'PREREQ_PM' => {
                            'Carp' => '0',
                            'Carp::Assert' => '0',
-                           'Class::Accessor::Fast' => '0',
+                           'Class::Meta' => '0.44',
+                           'Clone' => '0.15',
+                           'Test::Exception' => '0',
                            'Test::More' => '0',
-                           'base' => '0'
+                           'Test::Warn' => '0'
                          },
           'INSTALLDIRS' => 'site',
           'PL_FILES' => {}

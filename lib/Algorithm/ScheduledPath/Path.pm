@@ -1,6 +1,6 @@
 =head1 NAME
 
-Algorithm::ScheduledPath::Path - path class for Algorithm::ScheduledPath
+Algorithm::ScheduledPath::Path - Path class for Algorithm::ScheduledPath
 
 =cut
 
@@ -8,13 +8,15 @@ package Algorithm::ScheduledPath::Path;
 
 use 5.006;
 use strict;
-use warnings;
+use warnings::register;
 
-our $VERSION = '0.40_02';
+our $VERSION = '0.41_01';
 $VERSION = eval $VERSION;
 
 use Carp;
-use Algorithm::ScheduledPath::Edge 0.40;
+use Algorithm::ScheduledPath::Edge 0.41;
+
+use Clone 'clone';
 
 =head1 DESCRIPTION
 
@@ -65,15 +67,20 @@ sub add_edge {
   my $self = shift;
   while (my $edge = shift) {
     if (ref($edge) eq 'HASH') {
-      $self->add_edge( Algorithm::ScheduledPath::Edge->new($edge) );
+      $self->add_edge( Algorithm::ScheduledPath::Edge->new(%$edge) );
     }
     elsif ($edge->isa("Algorithm::ScheduledPath::Edge")) {
+
+      if ($edge->depart_time > $edge->arrive_time) {
+	croak "depart_time > arrive_time";
+      }
+
       if ($self->size == 0) {
 	$self->{VERTICES}->{ $edge->origin }++;
       }
       else {
 	if ($self->last_edge->destination ne $edge->origin) {	  
-	  croak "Unconnected path: ",
+	  croak "unconnected path: ",
 	    $self->last_edge->destination, " ",
 	    $edge->origin;
 	}
@@ -273,6 +280,9 @@ make it easier to identify where one needs to transfer to different
 bus lines.  (One could also use this to facilitate analysis of the
 number of transfers.)
 
+If one of the edges contains a I<data> attribute, then it may not
+be copied.  You will see a warning if it is not copied.
+
 =cut
 
 sub compressed {
@@ -285,38 +295,24 @@ sub compressed {
   foreach my $edge (@$path) {
     if ( ($comp->size==0) || 
 	 (!defined $path_id) || ($path_id ne $edge->path_id)) {
-      $comp->add_edge( $edge->copy );
+      $comp->add_edge( $edge->clone );
       $path_id = $edge->path_id;
     }
     else {
       $comp->last_edge->destination( $edge->destination );
       $comp->last_edge->arrive_time( $edge->arrive_time );
-      carp "Warning: data will not be copied", if (defined $edge->data);
+      carp "Warning: data attribute will not be copied",
+	if (warnings::enabled && (defined $edge->data));
     }
   }
   return $comp;
 }
 
+=item clone
 
-=item copy
+  $path2 = $path->clone;
 
-  $path2 = $path->copy;
-
-Copies the path.
-
-=cut
-
-sub copy {
-  my $self = shift;
-  my $copy = __PACKAGE__->new;
-  my $path = $self->get_edges;
-
-  foreach my $edge (@$path) {
-    $copy->add_edge( $edge->copy );
-  }
-  return $copy;
-}
-
+Clones the path.
 
 =back
 
@@ -330,8 +326,11 @@ Copyright (c) 2004 Robert Rothenberg. All rights reserved.  This
 program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
-=cut
+=head1 SEE ALSO
 
+Algorithm::ScheduledPath
+
+=cut
 
 1;
 __END__

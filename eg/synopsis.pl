@@ -25,11 +25,12 @@
 
   my $paths = $graph->find_paths('A', 'C');
 
-  # Outputs the following:
-  #  A 2 C 7
-  #  A 1 C 9
-
   foreach my $path (@$paths) {
     print join(" ", map { $path->$_ } (qw(
       origin depart_time destination arrive_time ))), "\n";
   }
+
+  # Outputs the following:
+  #  A 2 C 7
+  #  A 1 C 9
+

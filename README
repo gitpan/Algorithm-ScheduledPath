@@ -5,7 +5,7 @@ REQUIREMENTS
     The following non-standard modules are used:
 
       Carp::Assert
-      Class::Accessor::Fast
+      Class::Meta
 
 Installation
     Installation can be done using the traditional Makefile.PL or the
@@ -53,19 +53,19 @@ SYNOPSIS
 
       my $paths = $graph->find_paths('A', 'C');
 
-      # Outputs the following:
-      #  A 2 C 7
-      #  A 1 C 9
-
       foreach my $path (@$paths) {
         print join(" ", map { $path->$_ } (qw(
           origin depart_time destination arrive_time ))), "\n";
       }
 
+      # Outputs the following:
+      #  A 2 C 7
+      #  A 1 C 9
+
 DESCRIPTION
     This module is designed to find scheduled paths between vertices in a
     directed graph. For scheduled paths, each edge has a *time schedule*, so
-    they a path must contain edges with successivly later schedules. It will
+    that a path must contain edges with successivly later schedules. It will
     not return cyclic paths (paths which pass through a vertex more than
     once).
 
@@ -77,42 +77,28 @@ DESCRIPTION
     scripts.
 
 REVISION HISTORY
-    Changes since v0.31 (possibly incompatible changes marked with
+    Changes since v0.40 (possibly incompatible changes marked with
     an asterisk):
 
-    0.40 Nov 12 2004 (Developer Version)
-	* requires Carp::Assert for debugging behavior
-	- fixed bug with fetching earliest times
-	- added latest time value option in find_paths
-	- secondary sorting order by travel time
-	- added rudimentary test for cycles (tests need improvement)
-	- fixed bug in Edge::copy method (rt.cpan.org #8370)
-	- Edge::copy method only copies defined attributes
-	- updated/added documentation
-	- added Path::copy method for completeness sake
-	* aliases for compatability removed
-	- if a hash is passed to Path::add_edges method, it will pass the
-	  hash to Edge::new
-	* changed find_routes to find_paths since the interface has
-	  been changed
-	- updated code in find_routes method
-	- fixed compressed method bug (rt.cpan.org bug #8351)
-	- added copy method to Edge module
-	- Path module will croak if edges are not connected
-	- Path module: num_edges renamed to size (alias added for compat)
-	- Path module internals rewritten for speed
-
-    0.32  Nov 7 2004 (Developer Version)
-	- updates to documentation
-	- fixed typos in code
-	- added has_vertices and has_cycle methods to Path module
-	- fixed cycle bug (rt.cpan.org bug #8248)
- 	- modified example script to includes cases where bug shows up
-	- in modules, renamed *_leg functions to *_edge
-          (though aliases were added for compatability)
-	- minor optimizations
-	- removal of 'edge_sort' alias
-	- fixed typos in documentation
+    0.41  Nov 14 2004 (Developer Version)
+	- path_id, origin and destination can be objects so long as they
+	  have string conversion and comparison overloaded; likewise,
+	  depart_time and arrive_time can be objects so long as they too
+          have numeric conversion and comparison overloaded.
+	* copy methods renamed to clone
+	* uses Clone module
+	- more documentation updates
+	- when copying edge, warning when data contains a reference
+	* interface for Edge::new constructor is changed: it no longer
+          accepts hash references for arguments
+	* uses Class::Meta instead of Class::Accessor
+	- modules register warnings (warnings only when enabled)
+	- added more tests
+	- Path::add_edge checks that arrive_time >= depart_time
+	* requires Test::Exception and Test::Warn for tests
+	- added use of callback in eg/bus.pl demo
+	- added callback option in find_paths
+	- corrected typos in documentation
 
     A complete revision history can be found in the Changes file.
 
@@ -137,5 +123,3 @@ LICENSE
 SEE ALSO
     If you are looking for a generic (un)directed graph module, see the
     Graph package.
-
-

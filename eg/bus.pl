@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# bus.pl v0.32
+# bus.pl v0.41
 
 # Robert Rothenberg <rrwo@cpan.org> Copyright (C) 2004.  All Rights
 # Reserved.  This program is free software; you can redistribute it
@@ -14,17 +14,13 @@
 # TO-DO:
 # * command line arguments to turn this into a generic script
 # * bus schedule data from separate file or web site
-# * filter by max transfers
-# * filter by max travel time
-# * filter by min depart time, max arrive time
-# * option to show more than one  alternate transfers
 
 use strict;
 use warnings;
 
 use Carp;
 
-use Algorithm::ScheduledPath 0.40;
+use Algorithm::ScheduledPath 0.41;
 use Algorithm::ScheduledPath::Edge;
 use Algorithm::ScheduledPath::Path;
 
@@ -32,15 +28,61 @@ my %PathIds = ( );
 
 my $Graph  = parse_data();
 
-# Change the points searched.
+
 
 my $Routes = $Graph->find_paths(
-  'KRKCDY', 'STANDR',
+  'KRKCDY',                            # origin
+  'STANDR',                            # destination
   {
-   alternates => 1,
-   earliest   => parse_time('08:00'),
-   latest     => parse_time('11:00'),
-   max_time   => parse_time('02:00'),
+   alternates => 1,                    # only show one alternate route
+   earliest   => parse_time('07:00'),  # earliest time to leave
+   latest     => parse_time('11:00'),  # latest time to arrive
+   max_time   => parse_time('02:00'),  # maximum travel time
+
+   callback   => sub {                 # custom filter routine
+     my ($path, $options) = @_;
+
+     my $xfer_count = 0;               # count number of transfers
+     my $xfer_min   = 99999;           # track minimum transfer time
+     my $xfer_max   = -1;              # track maximum transfer time
+
+     # Note: we could run the following route on $path->compressed
+     # (indeed, $xfer_count == $path->compressed->size) but it is not
+     # more efficient, since this callback is called for each edge in
+     # a recursive routine. So compressing the edge will slow this
+     # down that much more.
+
+     {
+       my $last_edge;
+       foreach my $edge (@{$path->get_edges}) {
+	 if ( (defined $last_edge) &&
+	      ($last_edge->path_id ne $edge->path_id) ) {
+	   $xfer_count++;
+	   if (($edge->depart_time - $last_edge->arrive_time) < $xfer_min) {
+	     $xfer_min = ($edge->depart_time - $last_edge->arrive_time);
+	   }
+	   if (($edge->depart_time - $last_edge->arrive_time) > $xfer_max) {
+	     $xfer_max = ($edge->depart_time - $last_edge->arrive_time);
+	   }
+	 }
+	 $last_edge = $edge;
+       }
+     }
+
+     return
+       ( (!defined $options->{max_transfer_time}) ||
+	 ($xfer_max <= $options->{max_transfer_time}) ) &&
+       ( (!defined $options->{min_transfer_time}) ||
+	 ($xfer_min >= $options->{min_transfer_time}) ) &&
+       ( (!defined $options->{max_transfers}) ||
+	 ($xfer_count <= $options->{max_transfers}) ) &&
+       ( (!defined $options->{pass_through}) ||
+	 $path->has_vertex($options->{pass_through}) );
+   },
+   pass_through      => undef,
+   max_transfers     =>  1,     # we don't want to transfer too much
+   min_transfer_time =>  5,     # we want at least 5 min between xfers
+   max_transfer_time => 15,     # we don't want to wait more than 15 min
   }
 );
 
@@ -52,6 +94,8 @@ if (@$Routes) {
     if ($route->has_cycle) {
       croak "Route should not have cycles";
     }
+
+    # We compress the route so that we only see edges with different paths
 
     my $trip = $route->compressed;
 
@@ -112,13 +156,13 @@ sub parse_data {
 	$depart2 ||= $arrive;
 
 	if (defined $orig) {
-	  my $e = new Algorithm::ScheduledPath::Edge( {
+	  my $e = new Algorithm::ScheduledPath::Edge(
             path_id     => $path_id,
             origin      => $orig,
             depart_time => parse_time($depart),
             destination => $dest,
             arrive_time => parse_time($arrive), 
-          } );
+          );
 	  $graph->add_edge($e);
 	}
 

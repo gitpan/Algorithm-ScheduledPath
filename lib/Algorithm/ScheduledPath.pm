@@ -7,7 +7,7 @@ Algorithm::ScheduledPath - Find scheduled paths in a directed graph
 The following non-standard modules are used:
 
   Carp::Assert
-  Class::Accessor::Fast
+  Class::Meta
 
 =cut
 
@@ -15,15 +15,15 @@ package Algorithm::ScheduledPath;
 
 use 5.006;
 use strict;
-use warnings;
+use warnings::register;
 
 use Carp;
 use Carp::Assert;
 
-use Algorithm::ScheduledPath::Edge 0.40; # uses Class::Accessor::Fast
-use Algorithm::ScheduledPath::Path 0.40;
+use Algorithm::ScheduledPath::Edge 0.41; # uses Class::Meta
+use Algorithm::ScheduledPath::Path 0.41;
 
-our $VERSION = '0.40_02';
+our $VERSION = '0.41_01';
 $VERSION = eval $VERSION;
 
 =head1 SYNOPSIS
@@ -53,20 +53,20 @@ $VERSION = eval $VERSION;
 
   my $paths = $graph->find_paths('A', 'C');
 
-  # Outputs the following:
-  #  A 2 C 7
-  #  A 1 C 9
-
   foreach my $path (@$paths) {
     print join(" ", map { $path->$_ } (qw(
       origin depart_time destination arrive_time ))), "\n";
   }
 
+  # Outputs the following:
+  #  A 2 C 7
+  #  A 1 C 9
+
 =head1 DESCRIPTION
 
 This module is designed to find scheduled paths between vertices in a
 directed graph.  For scheduled paths, each edge has a I<time
-schedule>, so they a path must contain edges with successivly later
+schedule>, so that a path must contain edges with successivly later
 schedules.  It will not return cyclic paths (paths which pass through
 a vertex more than once).
 
@@ -83,14 +83,14 @@ get from point 'A' to point 'B' (noting any transfers in between).
   $graph = Algorithm::ScheduledPath->new();
 
   $graph = Algorithm::ScheduledPath->new(
-    Algorithm::ScheduledPath::Edge->new({
+    {
       path_id => 1, origin      => 'A', depart_time => 100,
                     destination => 'B', arrive_time => 200,
-    }),
-    Algorithm::ScheduledPath::Edge->new({
+    },
+    {
       path_id => 1, origin      => 'B', depart_time => 200,
                     destination => 'C', arrive_time => 300,
-    }),
+    },
   );
 
 Creates a new graph, and adds edges if they are specified.
@@ -130,7 +130,7 @@ sub add_edge {
   while (my $leg = shift) {
 
     if (ref($leg) eq 'HASH') {
-      $leg = Algorithm::ScheduledPath::Edge->new($leg);
+      $leg = Algorithm::ScheduledPath::Edge->new(%$leg);
     }
 
     croak "unexpected type",
@@ -194,6 +194,28 @@ The latest arrival time value included in the routes.
 =item max_time
 
 The maximum travel time a route may have.
+
+=item callback
+
+Define a callback routine to evaluate a path.  If the routine returns
+a true value, the path is accepted; otherwise it is rejected.
+
+The following example implements a "pass through" option that requires
+all paths to pass through a given vertex:
+
+   callback => sub {
+     my ($path, $options) = @_;
+     return (!defined $options->{pass_through}) ||
+       $path->has_vertex($options->{pass_through});
+   },
+
+An example of using callbacks to filter results is in the F<eg/bus.pl>
+script included with the distribution.
+
+Remember that the callback is called for each set of edges.  There is
+a balance between improving the search speed by filtering out unwanted
+paths during the search and slowing down the search by computationally
+expensive filtering.
 
 =back
 
@@ -311,6 +333,7 @@ sub find_paths {
 	      if (@connections) {
 		for (my $i=0; (($i<$options->{alternates}) &&
 			       ($i<@connections)); $i++) {
+
 		  my $path = Algorithm::ScheduledPath::Path->new(
 		       $route, $connections[$i] );
 
@@ -319,6 +342,8 @@ sub find_paths {
 
 		  push @routes, $path,
 		    unless (
+                      ( (defined $options->{callback}) &&
+			(!&{$options->{callback}}($path, $options)) ) ||
                       $path->has_cycle ||
 		      ( (defined $options->{max_time}) &&
 			($path->travel_time > $options->{max_time}))

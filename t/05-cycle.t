@@ -16,29 +16,29 @@ ok(defined $g);
 ok($g->isa("Algorithm::ScheduledPath"));
 
 $g->add_edge(
-  new Algorithm::ScheduledPath::Edge({
+  new Algorithm::ScheduledPath::Edge(
     path_id     =>   1,
     origin      => 'A', depart_time =>   0,
     destination => 'B', arrive_time =>   0,
-  }),
+  ),
 )->add_edge(
-  new Algorithm::ScheduledPath::Edge({
+  new Algorithm::ScheduledPath::Edge(
     path_id     =>   2,
     origin      => 'B', depart_time =>   0,
     destination => 'C', arrive_time =>   0,
-  }),
+  ),
 )->add_edge(
-  new Algorithm::ScheduledPath::Edge({
+  new Algorithm::ScheduledPath::Edge(
     path_id     =>   3,
     origin      => 'C', depart_time =>   0,
     destination => 'B', arrive_time =>   0,
-  }),
+  ),
 )->add_edge(
-  new Algorithm::ScheduledPath::Edge({
+  new Algorithm::ScheduledPath::Edge(
     path_id     =>   4,
     origin      => 'C', depart_time =>   0,
     destination => 'D', arrive_time =>   0,
-  }),
+  ),
 );
 
 my $p = $g->find_paths('A', 'D', { alternates => 10 });
