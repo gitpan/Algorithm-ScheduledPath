@@ -1,5 +1,6 @@
 Build.PL
 Changes
+eg/bus.pl
 Makefile.PL
 MANIFEST
 META.yml

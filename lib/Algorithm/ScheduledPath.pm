@@ -13,7 +13,7 @@ use warnings;
 use Carp;
 # use Carp::Assert;
 
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 =head1 DESCRIPTION
 
@@ -29,6 +29,22 @@ from point 'A' to point 'B' (noting any transfers in between).
 
 =item new
 
+  $graph = Algorithm::ScheduledPath->new();
+
+  $graph = Algorithm::ScheduledPath->new(
+    Algorithm::ScheduledPath::Edge->new({
+      path_id => 1, origin      => 'A', depart_time => 100,
+                    destination => 'B', arrive_time => 200,
+    }),
+    Algorithm::ScheduledPath::Edge->new({
+      path_id => 1, origin      => 'B', depart_time => 200,
+                    destination => 'C', arrive_time => 300,
+    }),
+  );
+
+Creates a new graph, and adds edges if they are specified.
+(See L</add_leg> for more details.)
+
 =cut
 
 sub new {
@@ -42,6 +58,19 @@ sub new {
 }
 
 =item add_leg
+
+  $graph->add_leg(
+    Algorithm::ScheduledPath::Edge->new({
+      id          =>   0, path_id => 1,
+      origin      => 'C', depart_time => 300,
+      destination => 'D', arrive_time => 400,
+    })
+  );
+
+Adds an edge (leg) to the graph.  Arguments must be
+C<Algorithm::ScheduledPath::Edge> objects.
+
+See L<Algorithm::ScheduledPath::Edge> for more information.
 
 =cut
 
@@ -74,6 +103,20 @@ sub add_leg {
 }
 
 =item find_routes
+
+  $routes = $graph->find_routes( $origin, $dest );
+
+  $routes = $graph->find_routes( $origin, $dest, $count );
+
+  $routes = $graph->find_routes( $origin, $dest, $count, $earliest );
+
+Returns an array reference of L<Algorithm::ScheduledPath::Path>
+objects.  Results are sorted in the earliest arrival time first.
+
+C<$count> specifies the number of alternate branches to include (it
+defaults to C<1>).
+
+C<$earliest> is the earliest time value included in the routes.
 
 =cut
 
@@ -122,35 +165,34 @@ sub find_routes {
 	my $head =
 	  $graph->find_routes($origin, $next, $connects, $depart, $trace);
 
-	return [ ], unless (@$head); # assert(@$head), if DEBUG;
+	if (@$head) {
+	  my $earliest = $head->[0]->arrive_time;
 
-	my $earliest = $head->[0]->arrive_time;
+	  my $tail =
+	    $graph->find_routes($next, $dest, $connects, $earliest, $trace);
 
-	my $tail =
-	  $graph->find_routes($next, $dest, $connects, $earliest, $trace);
+	  if (@$tail) {
 
-	if (@$tail) {
+	    foreach my $route (sort edge_sort @$head) {
+	      if (defined $route) {
 
-	  foreach my $route (sort edge_sort @$head) {
-	    if (defined $route) {
+		# Warning: values are sorted by arrival time, and there
+		# is nothing to favor continuing a leg on a route id!
 
-	      # Warning: values are sorted by arrival time, and there
-	      # is nothing to favor continuing a leg on a route id!
+		my @xfers = 
+		  grep( ($route->arrive_time <= $_->depart_time),
+			sort edge_sort @$tail);
 
-	      my @xfers = 
-		grep( ($route->arrive_time <= $_->depart_time),
-		sort edge_sort @$tail);
-
-	      if (@xfers) {
-		for (my $i=0; (($i<$connects) && ($i<@xfers)); $i++) {
-		  push @routes, Algorithm::ScheduledPath::Path->new(
-                    $route, $xfers[$i] );
+		if (@xfers) {
+		  for (my $i=0; (($i<$connects) && ($i<@xfers)); $i++) {
+		    push @routes, Algorithm::ScheduledPath::Path->new(
+								      $route, $xfers[$i] );
+		  }
 		}
+	      } else {
+		croak "Something\'s wrong";
+		# assert(0), if DEBUG;
 	      }
-	    }
-	    else {
-	      croak "Something\'s wrong";
-	      # assert(0), if DEBUG;
 	    }
 	  }
 	}
@@ -163,6 +205,17 @@ sub find_routes {
   }
 
 }
+
+# =item edge_sort
+# 
+# An "internal" routine for sorting edges in routes.  This can be
+# changed in a subclass for alternative sorting behavior.
+# 
+# =cut
+
+# sub _by_depart_time {
+#   $a->depart_time <=> $b->depart_time;
+# }
 
 sub _by_arrive_time {
   $a->arrive_time <=> $b->arrive_time;
@@ -183,6 +236,14 @@ for finding paths or determining the most efficient schedule. It is a
 hand-rolled recursive method that appears correct but I have not done
 any proofs of the method.  The sorting techniques are certainly not
 optimized.  It has not been tested on huge datasets.
+
+=cut
+
+# There may be a bug where bus routes double-back on themselves, in
+# the form of A->B->C->D->C.  It seems to show up with displaying
+# multiple possibilities.  It needs to be determined if this problem
+# is because of the search function or because of a bug in the
+# compression routine, if it can be reproduced at all.
 
 =head1 AUTHOR
 

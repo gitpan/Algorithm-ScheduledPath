@@ -1,5 +1,10 @@
 Revision history for Perl extension Algorithm::ScheduledPath.
 
+0.31  Nov  4 2004
+	- added example script
+	- added documentation
+	- fixed buggy behavior in choosing optimized routes
+
 0.30  Nov  3 2004
 	- alpha version, needs a bit more testing
 	- original version; created by h2xs 1.23 with options
