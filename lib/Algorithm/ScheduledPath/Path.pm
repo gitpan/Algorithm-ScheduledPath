@@ -10,10 +10,11 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '0.32';
+our $VERSION = '0.40';
+# $VERSION = eval $VERSION;
 
 use Carp;
-use Algorithm::ScheduledPath::Edge;
+use Algorithm::ScheduledPath::Edge 0.40;
 
 =head1 DESCRIPTION
 
@@ -30,16 +31,19 @@ L<Algorithm::ScheduledPath>.
 
 sub new {
   my $class = shift;
-  my $route = [ ];       # Warning: this is problematic for overloading '@{}'
-  bless $route, $class;
+  my $self = {
+    PATH     => [ ],
+    VERTICES => { },
+  };
+  bless $self, $class;
 
   if (@_) {
     while (my $edge = shift) {
-      $route->add_edge($edge);
+      $self->add_edge($edge);
     }
   }
 
-  return $route;
+  return $self;
 }
 
 =item add_edge
@@ -47,19 +51,33 @@ sub new {
 =cut
 
 sub add_edge {
-  my $route = shift;
+  my $self = shift;
   while (my $edge = shift) {
-    if ($edge->isa("Algorithm::ScheduledPath::Edge")) {
-      push @{$route}, $edge;
+    if (ref($edge) eq 'HASH') {
+      $self->add_edge( Algorithm::ScheduledPath::Edge->new($edge) );
+    }
+    elsif ($edge->isa("Algorithm::ScheduledPath::Edge")) {
+      if ($self->size == 0) {
+	$self->{VERTICES}->{ $edge->origin }++;
+      }
+      else {
+	if ($self->last_edge->destination ne $edge->origin) {	  
+	  croak "Unconnected path: ",
+	    $self->last_edge->destination, " ",
+	    $edge->origin;
+	}
+      }
+      $self->{VERTICES}->{ $edge->destination }++;
+      push @{$self->{PATH}}, $edge;
     }
     elsif ($edge->isa(__PACKAGE__)) {
-      $route->add_edge( @{$edge->get_edges} );
+      $self->add_edge( @{$edge->get_edges} );
     }
     else {
-      croak "expected ".__PACKAGE__;
+      croak "expected Edge or Path";
     }
   }
-  return $route;
+  return $self;
 }
 
 =item first_edge
@@ -67,13 +85,23 @@ sub add_edge {
 =cut
 
 sub first_edge {
-  my $route = shift;
-  if (@$route) {
-    return $route->[0];
+  my $self = shift;
+  if ($self->size) {
+    return $self->{PATH}->[0];
   }
   else {
     return;
   }
+}
+
+=item origin
+
+=cut
+
+sub origin {
+  my $self = shift;
+  my $edge = $self->first_edge;
+  return (defined $edge) ? $edge->origin : undef;
 }
 
 =item last_edge
@@ -81,13 +109,23 @@ sub first_edge {
 =cut
 
 sub last_edge {
-  my $route = shift;
-  if (@$route) {
-    return $route->[-1];
+  my $self = shift;
+  if ($self->size) {
+    return $self->{PATH}->[-1];
   }
   else {
     return;
   }
+}
+
+=item destination
+
+=cut
+
+sub destination {
+  my $self = shift;
+  my $edge = $self->last_edge;
+  return (defined $edge) ? $edge->destination : undef;
 }
 
 =item depart_time
@@ -96,8 +134,9 @@ sub last_edge {
 =cut
 
 sub depart_time {
-  my $route = shift;
-  return $route->first_edge->depart_time;
+  my $self = shift;
+  my $edge = $self->first_edge;
+  return (defined $edge) ? ($edge->depart_time) : undef;
 }
 
 =item arrive_time
@@ -105,8 +144,9 @@ sub depart_time {
 =cut
 
 sub arrive_time {
-  my $route = shift;
-  return $route->last_edge->arrive_time;
+  my $self = shift;
+  my $edge = $self->last_edge;
+  return (defined $edge) ? ($edge->arrive_time) : undef;
 }
 
 =item travel_time
@@ -115,8 +155,13 @@ sub arrive_time {
 =cut
 
 sub travel_time {
-  my $route = shift;
-  return ($route->arrive_time - $route->depart_time);
+  my $self = shift;
+  if ($self->size) {
+    return ($self->arrive_time - $self->depart_time);
+  }
+  else {
+    return;
+  }
 }
 
 =item get_edges
@@ -129,21 +174,21 @@ L<Algorithm::ScheduledPath::Edge> objects.
 =cut
 
 sub get_edges {
-  my $route = shift;
-  return [ @{$route} ];
+  my $self = shift;
+  return $self->{PATH};
 }
 
-=item num_edges
+=item size
 
-  $size = $path->num_edges;
+  $size = $path->size;
 
 Returns the number of edges in the path.
 
 =cut
 
-sub num_edges {
-  my $route = shift;
-  return scalar( @{$route} );
+sub size {
+  my $self = shift;
+  return scalar( @{$self->{PATH}} );
 }
 
 =item has_vertex
@@ -155,17 +200,9 @@ Returns true if a path passes through a given vertex.
 =cut
 
 sub has_vertex {
-  my $route = shift;
+  my $self = shift;
   my $vertex = shift;
-  if ($route->first_edge->origin eq $vertex) {
-    return 1;
-  }
-  foreach my $edge ( @$route ) {
-    if ($edge->destination eq $vertex) {
-      return 1;
-    }
-  }
-  return;
+  return (exists $self->{VERTICES}->{$vertex});
 }
 
 =item has_cycle
@@ -178,14 +215,10 @@ the same vertex more than once).
 =cut
 
 sub has_cycle {
-  my $route = shift;
-  my %vertices = ( $route->first_edge->origin => 1, );
-  foreach my $edge ( @$route ) {
-    if (++$vertices{ $edge->destination } > 1) {
-      return 1;
-    }
-  }
-  return;
+  my $self = shift;
+  local ($_);
+  my @cycle = grep $_>1, values %{$self->{VERTICES}};
+  return scalar(@cycle);
 }
 
 =item compressed
@@ -206,35 +239,24 @@ number of transfers.)
 =cut
 
 sub compressed {
-  my $route = shift;
-  my $comp  = __PACKAGE__->new;
-  foreach my $edge (@$route) {
-    if ($comp->num_edges) {
-      if ($comp->last_edge->path_id eq $edge->path_id) {
-	foreach my $method (qw( destination arrive_time )) {
-	  $comp->last_edge->$method( $edge->$method );
-	}
-	carp "data() attribute will be lost", if (defined $edge->data);
-      }
-      else {
-	$comp->add_edge($edge);
-      }
+  my $self = shift;
+  my $comp = __PACKAGE__->new;
+  my $path = $self->get_edges;
+
+  my $path_id;
+
+  foreach my $edge (@$path) {
+    if ( ($comp->size==0) || 
+	 (!defined $path_id) || ($path_id ne $edge->path_id)) {
+      $comp->add_edge( $edge->copy );
+      $path_id = $edge->path_id;
     }
     else {
-      $comp->add_edge($edge);
+      $comp->last_edge->destination( $edge->destination );
+      $comp->last_edge->arrive_time( $edge->arrive_time );
     }
   }
   return $comp;
-}
-
-# alias to maintain compatiability with version prior to 0.32
-
-BEGIN {
-  *add_leg   = \&add_edge;
-  *first_leg = \&first_edge;
-  *last_leg  = \&last_edge;
-  *get_legs  = \&get_edges;
-  *num_legs  = \&num_edges;
 }
 
 

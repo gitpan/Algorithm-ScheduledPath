@@ -12,17 +12,19 @@ use warnings;
 
 use Carp;
 
-use Algorithm::ScheduledPath::Edge 0.32;
-use Algorithm::ScheduledPath::Path 0.32;
+use Algorithm::ScheduledPath::Edge 0.40;
+use Algorithm::ScheduledPath::Path 0.40;
 
-our $VERSION = '0.32_01';
+our $VERSION = '0.40_01';
 $VERSION = eval $VERSION;
 
 =head1 DESCRIPTION
 
 This module is designed to find scheduled paths between vertices in a
-directed graph.  For scheduled paths, each edge has a I<time schedule>,
-so they a path must contain edges with successivly later schedules.
+directed graph.  For scheduled paths, each edge has a I<time
+schedule>, so they a path must contain edges with successivly later
+schedules.  It will not return cyclic paths (paths which pass through
+a vertex more than once).
 
 In less technical parlance, this module lets you do things like take a
 series of interconnected bus routes and determine a schedule of how to
@@ -84,6 +86,10 @@ sub add_edge {
 
   while (my $leg = shift) {
 
+    if (ref($leg) eq 'HASH') {
+      $leg = Algorithm::ScheduledPath::Edge->new($leg);
+    }
+
     croak "unexpected type",
       unless ($leg->isa("Algorithm::ScheduledPath::Edge"));
 
@@ -108,44 +114,58 @@ sub add_edge {
   return $graph;
 }
 
-BEGIN {
-  *add_leg = \&add_edge; # alias to maintain compatability w/v<0.32
-}
 
-=item find_routes
+=item find_paths
 
-  $routes = $graph->find_routes( $origin, $dest );
+  $routes = $graph->find_paths( $origin, $dest );
 
-  $routes = $graph->find_routes( $origin, $dest, $count );
-
-  $routes = $graph->find_routes( $origin, $dest, $count, $earliest );
+  $routes = $graph->find_paths( $origin, $dest, \%options );
 
 Returns an array reference of L<Algorithm::ScheduledPath::Path>
-objects of any paths betweeb the C<$origin> and C<$dest>.  (C<$origin>
+objects of any paths between the C<$origin> and C<$dest>.  (C<$origin>
 and C<$dest> are assumed to be strings.)  Results are sorted in the
 earliest arrival time first.
 
-C<$count> specifies the number of alternate branches to include (it
-defaults to C<1>).
+The following options are understood:
 
-C<$earliest> is the earliest time value included in the routes.
+=over
+
+=item alternates
+
+Specifies the number of alternate branches to include (defaults to C<1>).
+
+=item earliest
+
+The earliest time value included in the routes (defaults to C<0>).
+
+=back
 
 =cut
 
-sub find_routes {
+sub find_paths {
   my $graph = shift;
-  my ($origin, $dest, $connects, $depart, $trace) = @_;
+  my ($origin, $dest, $options, $trace) = @_;
 
-  $connects      = 1, unless (defined $connects);
+  local ($_);
+
+  $options     ||= { };
+  $options->{alternates} = 1, unless (defined $options->{alternates});
+  $options->{earliest}   = 0, unless (defined $options->{earliest});
 
   $trace         = { $origin => 1, }, unless (defined $trace);
   my $trace_back = { %$trace };
 
-  $depart      ||= 0; # we only return routes that depart after this time
-
   my @routes     = ( );
 
-  my $sort = sub {
+  my $sort = ($options->{numeric}) ? sub {
+    if ($a == $dest) {
+      return -1;
+    } elsif ($b == $dest) {
+      return 1;
+    } else {
+      return ($a <=> $b); # Note: assumes destinations str sorting
+    }
+  } : sub {
     if ($a eq $dest) {
       return -1;
     } elsif ($b eq $dest) {
@@ -172,55 +192,65 @@ sub find_routes {
       # times (that is, we don't continue on an earlier leg).  We also
       # limit the number of "connections" to speed up the algorithm.
 
+      # We also make sure to reject paths which are cyclic.
+
       if ($next eq $dest) {
 
 	push @routes,
 	  map { Algorithm::ScheduledPath::Path->new($_) }
-	  grep $_->depart_time >= $depart, @{ $graph->{$origin}->{$next} };
+	  grep $_->depart_time >= $options->{earliest},
+	    @{ $graph->{$origin}->{$next} };
       }
       elsif (!exists $trace->{$next}) {
 
 	$trace->{$next}++;
 
-	my $head =
-	  $graph->find_routes($origin, $next, $connects, $depart, $trace);
+	my @head = grep(
+          !($_->has_vertex($dest)||$_->has_cycle),
+	  @{ $graph->find_paths($origin, $next, $options, $trace) }
+        );
 
-	if (@$head) {
-	  my $earliest = $head->[0]->arrive_time;
+	if (@head) {
 
-	  my $tail =
-	    $graph->find_routes($next, $dest, $connects, $earliest, $trace);
+	  my $subopts  = { %$options, earliest => $head[0]->arrive_time, };
 
-	  if (@$tail) {
+	  my @tail = grep(
+            (!$_->has_cycle),
+	    @{ $graph->find_paths($next, $dest, $subopts, $trace) }
+          );
 
-	    foreach my $route (@$head) { # sort _by_arrive_time
+	  if (@tail) {
 
-	      # the "head" path could theorestically pass through our
-	      # destination, so we ignore these
+	    foreach my $route (@head) {
 
-	      unless ($route->has_vertex($dest)) {
+	      # Warning: values are sorted by arrival time, and there
+	      # is nothing to favor continuing a leg on a route id!
 
-		# Warning: values are sorted by arrival time, and there
-		# is nothing to favor continuing a leg on a route id!
+	      my @xfers = 
+		grep( ($route->arrive_time <= $_->depart_time),
+		      @tail
+		    );
 
-		my @xfers = 
-		  grep( ($route->arrive_time <= $_->depart_time),
-			@$tail); #  
+	      if (@xfers) {
+		for (my $i=0; (($i<$options->{alternates}) &&
+			       ($i<@xfers)); $i++) {
+		  my $path = Algorithm::ScheduledPath::Path->new(
+		       $route, $xfers[$i] );
 
-		if (@xfers) {
-		  for (my $i=0; (($i<$connects) && ($i<@xfers)); $i++) {
-		    my $path = Algorithm::ScheduledPath::Path->new(
-		      $route, $xfers[$i] );
-
-		    # We also reject paths that pass through the same
-		    # vertex more than once
-
-		    push @routes, $path,
-		      unless ($path->has_cycle);
-		    
+		  if ($route->destination ne $xfers[$i]->origin) {
+		    croak "Something is wrong: unconnected path";
 		  }
+
+		  # We also reject paths that pass through the same
+		  # vertex more than once (a possibility when we
+		  # concatenate two paths).
+
+		  push @routes, $path,
+		    unless ($path->has_cycle);
+		    
 		}
 	      }
+
 	    }
 	  }
 	}
@@ -250,12 +280,6 @@ any proofs of the method.  The sorting techniques are certainly not
 optimized.  It has not been tested on huge datasets.
 
 =cut
-
-# There may be a bug where bus routes double-back on themselves, in
-# the form of A->B->C->D->C.  It seems to show up with displaying
-# multiple possibilities.  It needs to be determined if this problem
-# is because of the search function or because of a bug in the
-# compression routine, if it can be reproduced at all.
 
 =head1 AUTHOR
 

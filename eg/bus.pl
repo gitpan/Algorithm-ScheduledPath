@@ -22,7 +22,9 @@
 use strict;
 use warnings;
 
-use Algorithm::ScheduledPath 0.32;
+use Carp;
+
+use Algorithm::ScheduledPath 0.40;
 use Algorithm::ScheduledPath::Edge;
 use Algorithm::ScheduledPath::Path;
 
@@ -32,14 +34,26 @@ my $Graph  = parse_data();
 
 # Change the points searched.
 
-my $Routes = $Graph->find_routes('KRKCDY', 'STANDR', 1);
+my $Routes = $Graph->find_paths('KRKCDY', 'STANDR', { alternates => 1 });
 
 print "-"x40, "\n";
 
 if (@$Routes) {
   foreach my $route (sort by_arrival @$Routes) {
+
+    if ($route->has_cycle) {
+      croak "Route should not have cycles";
+    }
+
+#     print join("\n", map { "*" . $_->path_id . " "
+# 			     . $_->origin . " " . $_->destination }
+#           @{$route->get_edges} ), "\n";
+
+    # Mysterious bug: if we compress it, it seems that the uncompressed route is invalid.  But if we use the uncompressed route, it appears fine. Why?
+
     my $trip = $route->compressed;
-    foreach my $leg (@{$trip->get_legs}) {
+
+    foreach my $leg (@{$trip->get_edges}) {
       print join("\t", $PathIds{$leg->path_id},
 		 $leg->origin, unparse_time($leg->depart_time),
 		 $leg->destination, unparse_time($leg->arrive_time)
@@ -102,7 +116,7 @@ sub parse_data {
             destination => $dest,
             arrive_time => parse_time($arrive), 
           } );
-	  $graph->add_leg($e);
+	  $graph->add_edge($e);
 	}
 
 	($orig, $depart) = ($dest, $depart2);

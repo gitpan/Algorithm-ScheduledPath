@@ -1,12 +1,33 @@
 NAME
-    Algorithm::ScheduledPath - find scheduled paths in a directed graph
+    Algorithm::ScheduledPath - Find scheduled paths in a directed graph
 
 DESCRIPTION
-    This module is designed to find scheduled paths in directed graph.
+    This module is designed to find scheduled paths between vertices in a
+    directed graph. For scheduled paths, each edge has a *time schedule*, so
+    they a path must contain edges with successivly later schedules. It will
+    not return cyclic paths (paths which pass through a vertex more than
+    once).
 
-    In less technical parlance, it lets you do things like take a series of
-    interconnected bus routes and determine a schedule of how to get from
-    point 'A' to point 'B' (noting any transfers in between).
+    In less technical parlance, this module lets you do things like take a
+    series of interconnected bus routes and determine a schedule of how to
+    get from point 'A' to point 'B' (noting any transfers in between).
+
+REVISION HISTORY
+    The interface has been changed in v0.40.  Programs which use earlier
+    versions of this package may not be compatible.
+
+    0.40_01 Nov 10 2004
+	* aliases for compatability removed
+	- if a hash is passed to Path::add_edges method, it will pass the
+	  hash to Edge::new
+	* changed find_routes to find_paths since the interface has
+	  been changed
+	- updated code in find_routes method
+	- fixed compressed method bug (rt.cpan.org bug #8351)
+	- added copy method to Edge module
+	- Path module will croak if edges are not connected
+	- Path module: num_edges renamed to size (alias added for compat)
+	- Path module internals rewritten for speed
 
 CAVEATS
     This module does not do any kind of sophisticated searching techniques
@@ -22,3 +43,9 @@ LICENSE
     Copyright (c) 2004 Robert Rothenberg. All rights reserved. This program
     is free software; you can redistribute it and/or modify it under the
     same terms as Perl itself.
+
+SEE ALSO
+    If you are looking for a generic (un)directed graph module, see the
+    Graph package. (This module does not make use of that package
+    intentionally.)
+

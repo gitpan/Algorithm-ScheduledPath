@@ -12,7 +12,7 @@ use warnings;
 
 use base 'Class::Accessor::Fast';
 
-our $VERSION = '0.32';
+our $VERSION = '0.40';
 
 =head1 DESCRIPTION
 
@@ -105,6 +105,24 @@ Returns the difference between the departure and arrival times.
 sub travel_time {
   my $self = shift;
   return (($self->arrive_time) - ($self->depart_time));
+}
+
+=item copy
+
+  $edge2 = $edge->copy;
+
+Copies the edge object.
+
+=cut
+
+sub copy {
+  my $self = shift;
+  my $copy = __PACKAGE__->new();
+  foreach my $method (qw(
+    path_id origin depart_time destination arrive_time data )) {
+    $copy->$method( $self->$method );
+  }
+  return $copy;
 }
 
 =back

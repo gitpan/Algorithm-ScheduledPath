@@ -1,6 +1,21 @@
 Revision history for Perl extension Algorithm::ScheduledPath.
 
-0.32
+0.40  Nov 10 2004
+	* aliases for compatability removed
+	- if a hash is passed to Path::add_edges method, it will pass the
+	  hash to Edge::new
+	* changed find_routes to find_paths since the interface has
+	  been changed
+	- updated code in find_routes method
+	- fixed compressed method bug (rt.cpan.org bug #8351)
+	- added copy method to Edge module
+	- Path module will croak if edges are not connected
+	- Path module: num_edges renamed to size (alias added for compat)
+	- Path module internals rewritten for speed
+
+0.32  Nov 7 2004 (Beta)
+	- updates to documentation
+	- fixed typos in code
 	- added has_vertices and has_cycle methods to Path module
 	- fixed cycle bug (rt.cpan.org bug #8248)
  	- modified example script to includes cases where bug shows up
