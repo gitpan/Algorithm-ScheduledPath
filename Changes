@@ -1,6 +1,13 @@
 Revision history for Perl extension Algorithm::ScheduledPath.
 
-0.41  Nov 14 2004 (Developer Version)
+0.41   Nov 21 2004 (Developer Version) 
+	- explicitly uses Data::Types module
+	* uses Scalar::Util module
+	- fixed bugs in strinklike and numberlike test functions
+	- added more tests
+	- more documentation updates
+	- callback is called for unjoined paths returned by find_paths
+	- callback option for find_paths is passed the split index
 	- path_id, origin and destination can be objects so long as they
 	  have string conversion and comparison overloaded; likewise,
 	  depart_time and arrive_time can be objects so long as they too

@@ -10,6 +10,9 @@ my $build = Module::Build->new
        'Carp::Assert'               => 0,
        'Class::Meta'                => 0.44,
        'Clone'                      => 0.15,
+       'Data::Types'                => 0.03,
+       'Scalar::Util'               => 1.10,
+       'overload'                   => 0,
      },
      recommends => {
      },

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# bus.pl v0.41
+# bus.pl v0.41.3
 
 # Robert Rothenberg <rrwo@cpan.org> Copyright (C) 2004.  All Rights
 # Reserved.  This program is free software; you can redistribute it
@@ -29,7 +29,6 @@ my %PathIds = ( );
 my $Graph  = parse_data();
 
 
-
 my $Routes = $Graph->find_paths(
   'KRKCDY',                            # origin
   'STANDR',                            # destination
@@ -40,7 +39,9 @@ my $Routes = $Graph->find_paths(
    max_time   => parse_time('02:00'),  # maximum travel time
 
    callback   => sub {                 # custom filter routine
-     my ($path, $options) = @_;
+     my ($path, $options, $index) = @_;
+
+     return 1 unless ($index > 0);
 
      my $xfer_count = 0;               # count number of transfers
      my $xfer_min   = 99999;           # track minimum transfer time
@@ -52,20 +53,15 @@ my $Routes = $Graph->find_paths(
      # a recursive routine. So compressing the edge will slow this
      # down that much more.
 
-     {
-       my $last_edge;
-       foreach my $edge (@{$path->get_edges}) {
-	 if ( (defined $last_edge) &&
-	      ($last_edge->path_id ne $edge->path_id) ) {
-	   $xfer_count++;
-	   if (($edge->depart_time - $last_edge->arrive_time) < $xfer_min) {
-	     $xfer_min = ($edge->depart_time - $last_edge->arrive_time);
-	   }
-	   if (($edge->depart_time - $last_edge->arrive_time) > $xfer_max) {
-	     $xfer_max = ($edge->depart_time - $last_edge->arrive_time);
-	   }
-	 }
-	 $last_edge = $edge;
+     my $last = $path->get_edges->[$index-1];
+     my $edge = $path->get_edges->[$index];
+     if ( (defined $last) && ($last->path_id ne $edge->path_id) ) {
+       $xfer_count++;
+       if (($edge->depart_time - $last->arrive_time) < $xfer_min) {
+	 $xfer_min = ($edge->depart_time - $last->arrive_time);
+       }
+       if (($edge->depart_time - $last->arrive_time) > $xfer_max) {
+	 $xfer_max = ($edge->depart_time - $last->arrive_time);
        }
      }
 
@@ -76,13 +72,13 @@ my $Routes = $Graph->find_paths(
 	 ($xfer_min >= $options->{min_transfer_time}) ) &&
        ( (!defined $options->{max_transfers}) ||
 	 ($xfer_count <= $options->{max_transfers}) ) &&
-       ( (!defined $options->{pass_through}) ||
-	 $path->has_vertex($options->{pass_through}) );
+       ( (!defined $options->{pass_through}) || ($index == 0) ||
+	 ( $path->has_vertex($options->{pass_through}) ) );
    },
    pass_through      => undef,
    max_transfers     =>  1,     # we don't want to transfer too much
    min_transfer_time =>  5,     # we want at least 5 min between xfers
-   max_transfer_time => 15,     # we don't want to wait more than 15 min
+   max_transfer_time => 30,     # we don't want to wait more than 15 min
   }
 );
 
@@ -197,7 +193,7 @@ X1	GLNRTH	2251	KRKCDY	2316
 6A	KRKCDY	0837	LEVEN	0915
 6	KRKCDY	0907	LEVEN	0945
 6A	KRKCDY	0937	LEVEN	1015
-6	Ldy	1007	LEVEN	1045
+6	KRKCDY	1007	LEVEN	1045
 
 6	LEVEN	1650	KRKCDY	1721
 6	LEVEN	1720	KRKCDY	1751
@@ -244,8 +240,6 @@ X1	GLNRTH	2251	KRKCDY	2316
 14	DNFMLN	0746	STRLNG	0909
 14	DNFMLN	0851	STRLNG	1008
 14A	DNFMLN	0951	STRLNG	1108
-
-
 
 23	STRLNG	0700	CUPAR	0837	STANDR	0855
 23	STRLNG	0705	CUPAR	0840	STANDR	0858
@@ -328,10 +322,11 @@ X26	LEVEN	2015	KRKCDY	2045	DNFMLN	2117
 41	KRKCDY	1015	CUPAR	1108
 41	KRKCDY	1215	CUPAR	1308
 
+41	CUPAR	1550	KRKCDY	1643
 41	CUPAR	1740	KRKCDY	1846
-41	CUPAR	1910	KRKCDY	2001
-41	CUPAR	2110	KRKCDY	2201
-41	CUPAR	2320	KRKCDY	2421
+41	CUPAR	1905	KRKCDY	1954
+41	CUPAR	2105	KRKCDY	2154
+41	CUPAR	2303	LEVEN	2342
 
 43A	LEVEN	0615	GLNRTH	0646
 44A	LEVEN	0635	GLNRTH	0714

@@ -9,9 +9,12 @@ WriteMakefile
                            'Carp::Assert' => '0',
                            'Class::Meta' => '0.44',
                            'Clone' => '0.15',
+                           'Data::Types' => '0.03',
+                           'Scalar::Util' => '1.1',
                            'Test::Exception' => '0',
                            'Test::More' => '0',
-                           'Test::Warn' => '0'
+                           'Test::Warn' => '0',
+                           'overload' => '0'
                          },
           'INSTALLDIRS' => 'site',
           'PL_FILES' => {}

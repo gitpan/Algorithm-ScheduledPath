@@ -8,6 +8,7 @@ The following non-standard modules are used:
 
   Carp::Assert
   Class::Meta
+  Scalar::Util
 
 =cut
 
@@ -23,7 +24,7 @@ use Carp::Assert;
 use Algorithm::ScheduledPath::Edge 0.41; # uses Class::Meta
 use Algorithm::ScheduledPath::Path 0.41;
 
-our $VERSION = '0.41_01';
+our $VERSION = '0.41_02';
 $VERSION = eval $VERSION;
 
 =head1 SYNOPSIS
@@ -177,7 +178,8 @@ The following options are understood:
 
 =item alternates
 
-Specifies the number of alternate branches to include (defaults to C<1>).
+Specifies the number of alternate branches to include (defaults to
+C<1>) for a path.
 
 =item earliest
 
@@ -200,13 +202,46 @@ The maximum travel time a route may have.
 Define a callback routine to evaluate a path.  If the routine returns
 a true value, the path is accepted; otherwise it is rejected.
 
+The callback is passed three values:
+
+=over
+
+=item $path
+
+This is a L<Algorithm::ScheduledPath::Path> object which contains the
+path to be filtered.
+
+=item $options
+
+This contains the options passed to L</find_paths>.  You may specify
+custom options for your callback.  However, to ensure that your
+parameter names do not conflict with parameters that may be added in
+future versions, you should start them with an underscore (e.g.
+"C<_name>").
+
+=item $index
+
+This is the index in the path where two paths were joined:
+
+  if ($index > 0) {
+    my $last = $path->get_edges->[$index-1];
+    my $edge = $path->get_edges->[$index];
+    ...
+  }
+
+It the index is C<0>, then it contains paths with a single edge.
+
+=back 
+
 The following example implements a "pass through" option that requires
 all paths to pass through a given vertex:
 
    callback => sub {
-     my ($path, $options) = @_;
-     return (!defined $options->{pass_through}) ||
-       $path->has_vertex($options->{pass_through});
+     my ($path, $options, $index) = @_;
+     return ( ($index == 0) ||
+	      (!defined $options->{pass_through}) ||
+	      $path->has_vertex($options->{pass_through})
+     );
    },
 
 An example of using callbacks to filter results is in the F<eg/bus.pl>
@@ -274,12 +309,16 @@ sub find_paths {
       if ($next eq $dest) {
 
 	push @routes,
+	  grep (
+            ( (!defined $options->{callback}) ||
+		(&{$options->{callback}}($_, $options, 0)) )
+          ,
 	  map { Algorithm::ScheduledPath::Path->new($_) }
 	  grep(
             ( ($_->depart_time >= $options->{earliest}) &&
               ( (!defined $options->{latest}) ||
 		($_->arrive_time <= $options->{latest}) )
-            ), @{ $graph->{$origin}->{$next} }
+            ), @{ $graph->{$origin}->{$next} } )
           );
 
       }
@@ -343,7 +382,8 @@ sub find_paths {
 		  push @routes, $path,
 		    unless (
                       ( (defined $options->{callback}) &&
-			(!&{$options->{callback}}($path, $options)) ) ||
+			(!&{$options->{callback}}($path, $options,
+						  $route->size)) ) ||
                       $path->has_cycle ||
 		      ( (defined $options->{max_time}) &&
 			($path->travel_time > $options->{max_time}))
@@ -397,6 +437,11 @@ It has not been tested on huge datasets.
 Robert Rothenberg <rrwo at cpan.org>
 
 Please submit bug reports and suggestions to the L<http://rt.cpan.org>.
+
+=head2 Acknowledgements
+
+Thanks to posters on L<http://www.perlmonks.org> for suggestions on
+type checking for "string-like" and "number-like" objects.
 
 =head1 LICENSE
 

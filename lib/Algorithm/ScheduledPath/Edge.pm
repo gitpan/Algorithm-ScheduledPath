@@ -8,6 +8,8 @@ package Algorithm::ScheduledPath::Types;
 
 use strict;
 use Class::Meta::Type;
+use Data::Types  qw( is_float );
+use Scalar::Util qw( blessed );
 
 # This is based on the Class::Meta::Types::(String|Number) modules but
 # allows for objects which behave like strings or numbers in that they
@@ -23,12 +25,10 @@ sub import {
     Class::Meta::Type->add(
         key     => "stringlike",
         name    => "Stringlike",
-        desc    => "Stringlike",
+        desc    => "A strng or string-like object",
         builder => $builder,
         check   => sub {
-            return unless defined $_[0] && ref $_[0];
-	    eval { ("$_[0]") && (($_[0] cmp $_[0])==0) }
-	      and return;
+	  return if _stringlike(@_);
             $_[2]->class->handle_error("Value '$_[0]' is not a valid string");
         }
     );
@@ -36,20 +36,44 @@ sub import {
     Class::Meta::Type->add(
         key     => "numberlike",
         name    => "numberlike",
-        desc    => "numberlike",
+        desc    => "A number of number-like object",
         builder => $builder,
         check   => sub {
-            return unless defined $_[0];
+	  return if _numberlike(@_);
 
-	    # L<perlfunc> manpage notes that NaN != NaN, so we can
-	    # verify that numeric conversion function works properly
-	    # along with the comparison operator.
+	  # This may be a problem if it's a class that doesn't support
+	  # strinification:
 
-	    eval { ((0+$_[0]) == (0+$_[0])) && (($_[0] <=> $_[0])==0) }
-	      and return;
-            $_[2]->class->handle_error("Value '$_[0]' is not a valid number");
+	  $_[2]->class->handle_error("Value '$_[0]' is not a valid number");
         }
     );
+}
+
+sub _stringlike {
+  return 1 unless defined $_[0] && ref $_[0];
+  return  (blessed $_[0])
+      && overload::Method($_[0], 'cmp')
+      && overload::Method($_[0], 'eq');
+}
+
+sub _numberlike {
+  return 1 unless (defined $_[0]);
+
+  # We want to recognize classes without stringification as having a
+  # minimum required set of numeric operations as being "numberlike"
+  # for our purposes.
+
+  if (blessed $_[0]) {
+    return
+         overload::Method($_[0], '<=>')
+      && overload::Method($_[0], '==')
+      && overload::Method($_[0], '-')
+      && overload::Method($_[0], '+')
+      && overload::Method($_[0], '0+');
+  }
+  else {
+    return is_float($_[0]);
+  }
 }
 
 1;
@@ -60,7 +84,7 @@ use 5.006;
 use strict;
 use warnings::register;
 
-our $VERSION = '0.41_01';
+our $VERSION = '0.41_02';
 $VERSION = eval $VERSION;
 
 use Carp;
